@@ -1,4 +1,5 @@
-var fs=require('fs')
+var fs=require('fs');
+const util = require('../../util');
 
 module.exports={
     "SignupPermision":{
@@ -42,7 +43,7 @@ module.exports={
             "Arn"
           ]
         },
-        "Runtime": "nodejs12.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
             "Fn::If": [ "VPCEnabled", {
@@ -54,12 +55,16 @@ module.exports={
             "Fn::If": [ "XRAYEnabled", {"Mode": "Active"},
                 {"Ref" : "AWS::NoValue"} ]
         },
+        "Layers":[
+          {"Ref":"AwsSdkLayerLambdaLayer"}
+        ],
         "Tags":[{
             Key:"Type",
             Value:"Cognito"
         }]
 
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     },
     "SignupLambda": {
       "Type": "AWS::Lambda::Function",
@@ -84,7 +89,7 @@ module.exports={
             "Arn"
           ]
         },
-        "Runtime": "nodejs12.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
             "Fn::If": [ "VPCEnabled", {
@@ -96,11 +101,15 @@ module.exports={
             "Fn::If": [ "XRAYEnabled", {"Mode": "Active"},
                 {"Ref" : "AWS::NoValue"} ]
         },
+        "Layers":[
+          {"Ref":"AwsSdkLayerLambdaLayer"}
+        ],
         "Tags":[{
             Key:"Type",
             Value:"Cognito"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     },
     "SignupLambdaRole": {
       "Type": "AWS::IAM::Role",
@@ -118,12 +127,13 @@ module.exports={
           ]
         },
         "Path": "/",
-        "ManagedPolicyArns": [
-          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-          "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
-          "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
-        ]
-      }
+        "Policies": [
+          util.basicLambdaExecutionPolicy(),
+          util.lambdaVPCAccessExecutionRole(),
+          util.xrayDaemonWriteAccess(),
+        ],
+      },
+      "Metadata": util.cfnNag(["W11", "W12"])
     }
-}
+};
 

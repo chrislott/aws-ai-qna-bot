@@ -3,9 +3,9 @@ module.exports={
         "Type" : "AWS::CloudFormation::Stack",
         "Condition":"BuildExamples",
         "Properties" : {
-            "TemplateURL" :{"Fn::Sub":"http://${BootstrapBucket}.s3.${AWS::Region}.amazonaws.com/${BootstrapPrefix}/templates/examples.json"},
+            "TemplateURL" :{"Fn::Sub":"https://${BootstrapBucket}.s3.${AWS::Region}.amazonaws.com/${BootstrapPrefix}/templates/examples.json"},
             "Parameters" :{
-                "QnAType":{"Fn::GetAtt":["Var","QnAType"]}, 
+                "QnAType":{"Fn::GetAtt":["Var","QnAType"]},
                 "QuizType":{"Fn::GetAtt":["Var","QuizType"]},
                 "Index":{"Fn::GetAtt":["Var","QnaIndex"]},
                 "ESAddress":{"Fn::GetAtt":["ESVar","ESAddress"]},
@@ -21,7 +21,11 @@ module.exports={
                 "QIDLambdaArn":{"Fn::GetAtt":["ESQidLambda","Arn"]},
                 "VPCSubnetIdList" : { "Fn::Join" : [ ",", {"Ref":"VPCSubnetIdList"} ] },
                 "VPCSecurityGroupIdList": { "Fn::Join" : [ ",", {"Ref":"VPCSecurityGroupIdList"} ] },
+                "LexBotVersion": {"Ref": "LexBotVersion"},
                 "XraySetting":{"Ref": "XraySetting"},
+                "DefaultQnABotSettings": {"Ref":"DefaultQnABotSettings"},
+                "InstallLexResponseBots": {"Ref": "InstallLexResponseBots"},
+                "AwsSdkLayerLambdaLayer":{"Ref":"AwsSdkLayerLambdaLayer"},
             }
         }
     }

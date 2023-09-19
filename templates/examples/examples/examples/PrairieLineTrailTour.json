@@ -114,7 +114,7 @@
               "Flow plus Pressure"
           ], 
           "r": {
-              "imageUrl": "https://www.prairielinetrail.org/media/dynamic/heroes/237_Dockrey_rendering.jpg", 
+              "imageUrl": "https://www.prairielinetrail.org/media/dynamic/heroes/295_20190111_Prairie_Line_Trail_Artwork_DSC02921.jpg",
               "title": "Pressure + Flow (Rendering of proposed piece)"
           }, 
           "t": "Pressure + Flow", 
@@ -181,7 +181,7 @@
               "the shipment to China"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/shipment%20to%20china.jpg", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/shipment%20to%20china.jpg", 
               "title": "Shipment to China"
           }, 
           "t": "Shipment to China", 
@@ -247,7 +247,7 @@
               "the Nexus"
           ], 
           "r": {
-              "imageUrl": "https://www.prairielinetrail.org/media/dynamic/heroes/235_Feddersen_Nexus_-_larger.jpg", 
+              "imageUrl": "https://www.prairielinetrail.org/media/dynamic/heroes/298_pic2_EDITED.jpg",
               "title": "Nexus (Rendering of proposed piece)"
           }, 
           "t": "Nexus", 
@@ -313,7 +313,7 @@
               "the Welcome Figure"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/welcome%20figure.jpg", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/welcome%20figure.jpg", 
               "title": "Welcome Figure"
           }, 
           "t": "Welcome Figure", 
@@ -394,7 +394,7 @@
               "the Maru"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/maru.jpg", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/maru.jpg", 
               "title": "Maru"
           }, 
           "t": "Maru", 
@@ -497,7 +497,7 @@
               "the Joy Building"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/joy%20building.jpg", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/joy%20building.jpg", 
               "title": "Joy Building",
               "subTitle":"Photo courtesy of University of Washington Tacoma"
           }, 
@@ -534,7 +534,7 @@
               "Branch: West Coast Grocery and Union Station"
           ],
           "r": {
-            "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/Branch%20West%20Coast%20Grocery%20and%20Union%20Station.png", 
+            "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/Branch%20West%20Coast%20Grocery%20and%20Union%20Station.png", 
             "title": "Map Overview"
             },  
           "t": "Branch: West Coast Grocery and Union Station", 
@@ -553,7 +553,7 @@
               "the Union Station"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/union%20station.jpg", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/union%20station.jpg", 
               "title": "Union Station and Pacific Avenue"
           }, 
           "t": "Pacific Avenue and Union Station", 
@@ -612,7 +612,7 @@
               "the Union Station"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/west%20coast%20grocery.jpg", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/west%20coast%20grocery.jpg", 
               "title": "West Coast Grocery",
               "subTitle":"Photo credit University of Washington Tacoma"
           }, 
@@ -667,7 +667,7 @@
               "terminal"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/terminus.jpg", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/terminus.jpg", 
               "title": "Terminus",
               "subTitle":"Photo courtesy of University of Washington Tacoma"
           }, 
@@ -734,7 +734,7 @@
               "historical context"
           ], 
           "r": {
-              "imageUrl": "https://www.prairielinetrail.org/media/dynamic/images/112_WSHS_1996_114_13.jpg", 
+              "imageUrl": "https://www.prairielinetrail.org/media/dynamic/images/112_WSHS_1996_114_13.jpg",
               "title": "Train on ferry",
               "subTitle":"ca. 1900 (1996.114.13, Washington State Historical Society (Tacoma, Wash.))"
           }, 
@@ -773,7 +773,7 @@
               "Branch: Swiss Hall, Washington State History Museum, and Rails & Rain Garden"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/Branch%20Swiss%20Hall%20Washington%20State%20History%20Museum%20and%20Rails%20%20Rain%20Garden.png", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/Branch%20Swiss%20Hall%20Washington%20State%20History%20Museum%20and%20Rails%20%20Rain%20Garden.png", 
               "title": "Map Overview"
           }, 
           "t": "Branch: Swiss Hall, Washington State History Museum, and Rails & Rain Garden", 
@@ -792,7 +792,7 @@
               "go to the swiss hall"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/swiss%20hall.jpg", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/swiss%20hall.jpg", 
               "title": "Swiss Hall"
           }, 
           "t": "Swiss Hall", 
@@ -847,7 +847,7 @@
               "Branch: Washington State History Museum and Rails & Rain Garden"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/Branch%20Washington%20State%20History%20Museum%20and%20Rails%20%20Rain%20Garden.png", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/Branch%20Washington%20State%20History%20Museum%20and%20Rails%20%20Rain%20Garden.png", 
               "title": "Map Overview"
           }, 
           "t": "Branch: Washington State History Museum and Rails & Rain Garden", 
@@ -866,7 +866,7 @@
               "go to the Washington State History Museum"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/washington%20state%20history%20museum%20arch%20.jpg", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/washington%20state%20history%20museum%20arch%20.jpg", 
               "title": "Washington State History Museum arch",
               "subTitle":"Photo courtesy of Washington State Historical Society"
           }, 
@@ -913,7 +913,7 @@
               "Branch: Swiss Hall and Rails & Rain Garden"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/Branch%20Swiss%20Hall%20and%20Rails%20%20Rain%20Garden.png", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/Branch%20Swiss%20Hall%20and%20Rails%20%20Rain%20Garden.png", 
               "title": "Map Overview"
           }, 
           "t": "Branch: Swiss Hall and Rails & Rain Garden", 
@@ -934,7 +934,7 @@
               "go to the Rails and Rain Garden"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/rails%20and%20rain.jpg", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/rails%20and%20rain.jpg", 
               "title": "Rails & Rain Garden"
           }, 
           "t": "Rails & Rain Garden", 
@@ -944,7 +944,7 @@
           "type": "qna"
       }, 
       {
-          "a": "This feature's main practical function is to treat stormwater. In an urban environment, stormwater picks up pollutants. Rain gardens like this one use special plants to filter out pollution before runoff hits major waterways. This rain garden treats stormwater from 42 acres of developed urban space upstream, making sure that water is clean and safe when it joins the Thea Foss Waterway at the bottom of the hill.\n\n Learn more about the Prairie Line Trail Stormwater Treatment: https://www.tacoma.uw.edu/news/article/how-it-works-prairie-line-trail-stormwater-treatment . \n\n Artfully designed to work with the existing railroad tracks, the rain garden also preserves a key piece of Tacoma's history. A close look at the rusty track segments reveals dates. These dates show the last time the tracks were swapped out for maintenance reasons. The last train rumbled over the Prairie Line tracks in Tacoma on the afternoon of March 30, 2003, just under fifty years after these rails were last replaced.", 
+          "a": "This feature's main practical function is to treat stormwater. In an urban environment, stormwater picks up pollutants. Rain gardens like this one use special plants to filter out pollution before runoff hits major waterways. This rain garden treats stormwater from 42 acres of developed urban space upstream, making sure that water is clean and safe when it joins the Thea Foss Waterway at the bottom of the hill.\n\n Artfully designed to work with the existing railroad tracks, the rain garden also preserves a key piece of Tacoma's history. A close look at the rusty track segments reveals dates. These dates show the last time the tracks were swapped out for maintenance reasons. The last train rumbled over the Prairie Line tracks in Tacoma on the afternoon of March 30, 2003, just under fifty years after these rails were last replaced.",
           "qid": "Rails & Rain Garden: Art, history, and science", 
           "q": [
               "art", 
@@ -959,7 +959,7 @@
           }, 
           "t": "Rails & Rain Garden", 
           "alt": {
-              "markdown": "This feature's main practical function is to treat stormwater. In an urban environment, stormwater picks up pollutants. Rain gardens like this one use special plants to filter out pollution before runoff hits major waterways. This rain garden treats stormwater from 42 acres of developed urban space upstream, making sure that water is clean and safe when it joins the Thea Foss Waterway at the bottom of the hill.\n\n Learn more about the Prairie Line Trail Stormwater Treatment: https://www.tacoma.uw.edu/news/article/how-it-works-prairie-line-trail-stormwater-treatment . \n\n Artfully designed to work with the existing railroad tracks, the rain garden also preserves a key piece of Tacoma's history. A close look at the rusty track segments reveals dates. These dates show the last time the tracks were swapped out for maintenance reasons. The last train rumbled over the Prairie Line tracks in Tacoma on the afternoon of March 30, 2003, just under fifty years after these rails were last replaced."
+              "markdown": "This feature's main practical function is to treat stormwater. In an urban environment, stormwater picks up pollutants. Rain gardens like this one use special plants to filter out pollution before runoff hits major waterways. This rain garden treats stormwater from 42 acres of developed urban space upstream, making sure that water is clean and safe when it joins the Thea Foss Waterway at the bottom of the hill.\n\n Artfully designed to work with the existing railroad tracks, the rain garden also preserves a key piece of Tacoma's history. A close look at the rusty track segments reveals dates. These dates show the last time the tracks were swapped out for maintenance reasons. The last train rumbled over the Prairie Line tracks in Tacoma on the afternoon of March 30, 2003, just under fifty years after these rails were last replaced."
           }, 
           "type": "qna"
       }, 
@@ -989,7 +989,7 @@
               "the Heidelberg Complex"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/heidelberg%20complex.jpg", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/heidelberg%20complex.jpg", 
               "title": "7 Seas Brewing"
           }, 
           "t": "Heidelberg Complex", 
@@ -1066,7 +1066,7 @@
               "the Working Forward, Weaving Anew"
           ], 
           "r": {
-              "imageUrl": "https://raw.githubusercontent.com/aws-samples/aws-ai-qna-bot/develop/assets/examples/photos/walking%20forward%20and%20weaving%20anew.jpg", 
+              "imageUrl": "https://raw.githubusercontent.com/aws-solutions/qnabot-on-aws/develop/assets/examples/photos/walking%20forward%20and%20weaving%20anew.jpg", 
               "title": "Working Forward, Weaving Anew"
           }, 
           "t": "Working Forward, Weaving Anew", 
@@ -1092,7 +1092,7 @@
           "type": "qna"
       }, 
       {
-          "a": " Jessilyn Brinkerhoff and Esteban Camacho Steffensen are muralists and collaborative public artists.  Their work flows out of conversations, and tells awe-inspiring, larger-than-life stories. In this case, their conversations with local historians and representatives from the Puyallup Tribe inspired this mural, which was conceptualized and refined in 20 different versions of the design.\n\n To create the final mural, the artists used their full artistic arsenal: sketching, painting, photography, and graphic design. As they designed, the artists relied on historic photos, documents, and artifacts to accurately capture and weave together this complex array of stories.\n\n Visit Jessilyn Brinkerhoff's website: https://www.wildcloudcreative.com/.\n\n Visit Esteban Camacho Steffensen's website: http://camachosteffensen.blogspot.com/.", 
+          "a": " Jessilyn Brinkerhoff and Esteban Camacho Steffensen are muralists and collaborative public artists.  Their work flows out of conversations, and tells awe-inspiring, larger-than-life stories. In this case, their conversations with local historians and representatives from the Puyallup Tribe inspired this mural, which was conceptualized and refined in 20 different versions of the design.\n\n To create the final mural, the artists used their full artistic arsenal: sketching, painting, photography, and graphic design. As they designed, the artists relied on historic photos, documents, and artifacts to accurately capture and weave together this complex array of stories.\n\n Visit Esteban Camacho Steffensen's website: https://camachosteffensen.blogspot.com/.",
           "qid": "Working Forward, Weaving Anew: Meet the artists", 
           "q": [
               "who made this", 
@@ -1103,7 +1103,7 @@
           ], 
           "t": "Working Forward, Weaving Anew", 
           "alt": {
-              "markdown": " Jessilyn Brinkerhoff and Esteban Camacho Steffensen are muralists and collaborative public artists.  Their work flows out of conversations, and tells awe-inspiring, larger-than-life stories. In this case, their conversations with local historians and representatives from the Puyallup Tribe inspired this mural, which was conceptualized and refined in 20 different versions of the design.\n\n To create the final mural, the artists used their full artistic arsenal: sketching, painting, photography, and graphic design. As they designed, the artists relied on historic photos, documents, and artifacts to accurately capture and weave together this complex array of stories.\n\n Visit Jessilyn Brinkerhoff's website: [https://www.wildcloudcreative.com/](https://www.wildcloudcreative.com/).\n\n Visit Esteban Camacho Steffensen's website: [http://camachosteffensen.blogspot.com/](http://camachosteffensen.blogspot.com/)."
+              "markdown": " Jessilyn Brinkerhoff and Esteban Camacho Steffensen are muralists and collaborative public artists.  Their work flows out of conversations, and tells awe-inspiring, larger-than-life stories. In this case, their conversations with local historians and representatives from the Puyallup Tribe inspired this mural, which was conceptualized and refined in 20 different versions of the design.\n\n To create the final mural, the artists used their full artistic arsenal: sketching, painting, photography, and graphic design. As they designed, the artists relied on historic photos, documents, and artifacts to accurately capture and weave together this complex array of stories.\n\n Visit Esteban Camacho Steffensen's website: [http://camachosteffensen.blogspot.com/](https://camachosteffensen.blogspot.com/)."
           }, 
           "type": "qna"
       }, 

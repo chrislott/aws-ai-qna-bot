@@ -1,10 +1,11 @@
-var fs=require('fs')
-var _=require('lodash')
+var fs=require('fs');
+var _=require('lodash');
+const util = require('../util');
 
 var files=fs.readdirSync(`${__dirname}`)
     .filter(x=>!x.match(/README.md|Makefile|dashboard|index|test|.DS_Store/))
     .map(x=>require(`./${x}`))
-    
+
 var lambdas=[]
 _.forEach(_.assign.apply({},files),(value,key)=>{
     if(value.Type==='AWS::Lambda::Function'){
@@ -19,48 +20,8 @@ _.forEach(_.assign.apply({},files),(value,key)=>{
 })
 
 module.exports=Object.assign(
-    _.fromPairs(lambdas),
-{"LambdaAccessRole": {
-      "Type": "AWS::IAM::Role",
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "apigateway.amazonaws.com"
-              },
-              "Action": "sts:AssumeRole"
-            }
-          ]
-        },
-        "Path": "/",
-        "ManagedPolicyArns": [
-          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-          "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
-          "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess",
-        ],
-        "Policies": [
-          {
-            "PolicyName" : "LambdaPolicy",
-            "PolicyDocument" : {
-              "Version": "2012-10-17",
-              "Statement": [
-                {
-                  "Effect": "Allow",
-                  "Action": [
-                    "lambda:*"
-                  ],
-                  "Resource":["*"]
-                }
-              ]
-            }
-          }
-        ]
-      }
-  },
-})
+    _.fromPairs(lambdas)
+)
 
 function permission(name){
     return {

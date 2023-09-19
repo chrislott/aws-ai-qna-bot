@@ -1,4 +1,5 @@
 var fs=require('fs')
+const util = require('../../util');
 module.exports={
     "CognitoDomain":{
         "Type": "Custom::CognitoDomain",
@@ -54,7 +55,7 @@ module.exports={
     },
     "User":{
         "Type" : "AWS::Cognito::UserPoolUser",
-        "DependsOn":["SignupPermision","MessagePermision","ElasticsearchDomainUpdate","KibanaRoleAttachment","RoleAttachment"],
+        "DependsOn":["SignupPermision","MessagePermision","KibanaRoleAttachment","RoleAttachment"],
         "Properties" : {
             "DesiredDeliveryMediums":["EMAIL"],
             "UserAttributes":[{
@@ -88,7 +89,8 @@ module.exports={
             "ServerSideTokenCheck": true
           }
         ]
-      }
+      },
+      "Metadata": util.cfnNag(["W57"])
     },
     "KibanaIdPool": {
       "Type": "AWS::Cognito::IdentityPool",
@@ -105,7 +107,7 @@ module.exports={
             "DomainName":{"Fn::GetAtt":["ESVar","ESDomain"]},
             "Roles":{
                 "authenticated":{"Fn::GetAtt":["UserRole","Arn"]},
-                "unauthenticated":{"Fn::GetAtt":["UnauthenticatedRole","Arn"]} 
+                "unauthenticated":{"Fn::GetAtt":["UnauthenticatedRole","Arn"]}
             },
             "RoleMappings":[{
                 "ClientId":{"Fn::GetAtt":["KibanaClient","ClientId"]},
@@ -128,7 +130,7 @@ module.exports={
             "IdentityPoolId":{"Ref":"IdPool"},
             "Roles":{
                 "authenticated":{"Fn::GetAtt":["UserRole","Arn"]},
-                "unauthenticated":{"Fn::GetAtt":["UnauthenticatedRole","Arn"]} 
+                "unauthenticated":{"Fn::GetAtt":["UnauthenticatedRole","Arn"]}
             },
             "RoleMappings":[{
                 "ClientId":{"Ref":"ClientClient"},
@@ -182,11 +184,10 @@ module.exports={
     },
     "KibanaClient":{
         "Type": "Custom::ESCognitoClient",
-        "DependsOn":["ElasticsearchDomainUpdate"],
         "Properties": {
             "ServiceToken": { "Fn::GetAtt" : ["CFNLambda", "Arn"] },
             "UserPool":{"Ref":"UserPool"},
-            "DomainName":{"Fn::GetAtt":["ESVar","ESDomain"]} 
+            "DomainName":{"Fn::GetAtt":["ESVar","ESDomain"]}
         }
     },
     "ClientDesigner": {

@@ -11,9 +11,9 @@
 | ES_NO_HITS_QUESTION | text | The question QnABot should use when it cannot find an answer
 | ES_USE_FUZZY_MATCH  | true or false | Determines whether QnABot should return answers similar to the question asked. See [Fuzzy Query](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-fuzzy-query.html) for more information
 | ES_PHRASE_BOOST | integer | If the user's question is a phrase match to a question in the knowledge then boost the score by this factor.
-| ES_SCORE_ANSWER_FIELD | true or false | Include the content of the answer field (not just the question fields) when determining the score for a match
+| ES_SCORE_ANSWER_FIELD | true or false | Search the content of the answer field as a 2nd pass query (if there's no good match from 1st pass query on question fields).
 | ENABLE_SENTIMENT_SUPPORT | true or false | Enables [Amazon Comprehend](https://docs.aws.amazon.com/comprehend/latest/dg/how-sentiment.html) be used for sentiment analysis
-| ENABLE_MULTI_LANGUAGE_SUPPORT | true or false | Enable or Disable Amazon Translate support
+| ENABLE_MULTI_LANGUAGE_SUPPORT | true or false | Enable or Disable Amazon Translate support. See list of [Supported Languages](multilanguage_support.md#supported-languages)
 | ENABLE_CUSTOM_TERMINOLOGY| true or false |  Enable support for installed [Custom Terminology](https://aws.amazon.com/blogs/machine-learning/introducing-amazon-translate-custom-terminology/) files when using Amazon Translate
 | MINIMUM_CONFIDENCE_SCORE | decimal between 0.0 and 0,99 | The minimum confidence before Amazon Comprehend will determine the user's language
 | ALT_SEARCH_KENDRA_INDEXES | An Array of comma separated Ids |  A list of one or more [Amazon Kendra](https://aws.amazon.com/kendra/) indexes used for Kendra fallback
@@ -25,14 +25,19 @@
 | ALT_SEARCH_KENDRA_FAQ_MESSAGE | string | Heading when a [Frequently Asked Question](https://docs.aws.amazon.com/kendra/latest/dg/response-types.html) is found by Amazon Kendra.
 | ALT_SEARCH_KENDRA_TOP_ANSWER_MESSAGE | string | Heading when the [top answer](https://docs.aws.amazon.com/kendra/latest/dg/response-types.html) is found by Amazon Kendra
 | ALT_SEARCH_KENDRA_ANSWER_MESSAGE | string | Heading when a [Document](https://docs.aws.amazon.com/kendra/latest/dg/response-types.html) is returned by Amazon Kendra
-| KENDRA_FAQ_INDEX | Kendra Index Id | Kendra Index to use sync Elastic Search questions and answers
+| ALT_SEARCH_KENDRA_RESPONSE_TYPES | Comma separated list. One or more valid [Amazon Kendra response type](https://docs.aws.amazon.com/kendra/latest/dg/response-types.html) | Kendra fallback will only return responses of the listed types
+| ALT_SEARCH_KENDRA_ABBREVIATE_MESSAGE_FOR_SSML | boolean | If a set to "true", an abbreviate Amazon Kendra response will be sent via voice.  If set to "false", the full text of the Kendra fallback response will be sent when using voice.
+| KENDRA_FAQ_INDEX | Kendra Index Id | Amazon Kendra Index to use sync Elastic Search questions and answers
 | KENDRA_FAQ_CONFIG_MAX_RETRIES | integer | Number of times to retry syncing FAQ's when a throttling error occurs
 | KENDRA_FAQ_CONFIG_RETRY_DELAY | integer | Amount of time to wait in seconds between attempts to retry syncing
 | KENDRA_FAQ_ES_FALLBACK | true or false | When Kendra FAQ is enabled, but does not return an answer then query ElasticSearch
 | ENABLE_KENDRA_WEB_INDEXER | true or false | Enables the web indexer
 | KENDRA_INDEXER_URLS | comma separated list | List of web addresses QnABot should crawl and [index with Kendra](./kendra_crawler_guide/README.md)
 | KENDRA_INDEXER_SCHEDULE | [CloudWatch Rate Syntax](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html) | Interval Indexer should crawl
-| KENDRA_WEB_PAGE_INDEX | Kendra Index Id | The index to use for the web crawler, a [custom data source](https://docs.aws.amazon.com/kendra/latest/dg/data-source-custom.html) will automatically be added to the specified index.  
+| KENDRA_INDEXER_CRAWL_DEPTH | number | Sets the depth to the number of levels in a website from the seed level that you want to crawl
+| KENDRA_INDEXER_CRAWL_MODE | HOST_ONLY \| SUBDOMAINS \| EVERYTHING | Determines which addresses should be crawled
+| KENDRA_WEB_PAGE_INDEX | Kendra Index Id | The index to use for the web crawler, a [custom data source](https://docs.aws.amazon.com/kendra/latest/dg/data-source-custom.html) will automatically be added to the specified index.
+| KENDRA_INDEXED_DOCUMENTS_LANGUAGES | comma separate list | Should be one of supported Kendra languages mentioned in [documentation](https://docs.aws.amazon.com/kendra/latest/dg/in-adding-languages.html)
 | ERRORMESSAGE | text | Response to the user when a processing error occurs
 | EMPTYMESSAGE | text | Response to the user when an answer could not be found
 | DEFAULT_ALEXA_LAUNCH_MESSAGE | text | Initial greeting when using Alexa
@@ -48,19 +53,42 @@
 | ELICIT_RESPONSE_RETRY_MESSAGE | text |  Default retry message when working with LexBot
 | ELICIT_RESPONSE_BOT_FAILURE_MESSAGE | text |  Message used when maximum number of retries is exceeded
 | ELICIT_RESPONSE_DEFAULT_MSG| text |
-| CONNECT_IGNORE_WORDS | comma separated list | Throw error if connect client sends individual characters not processable by elastic search
+| CONNECT_IGNORE_WORDS | comma separated list | Throw an error if the transcript provided by connect __only__ contains the words in this list (case insensitive). This is useful if you find many missed utterances due to the use of filler words before a proper utterance (e.g. "a", "e", "umm", "like", etc.). This setting can not be used as a transcript filter (see `LAMBDA_PREPROCESS_HOOK` or `LAMBDA_POSTPROCESS_HOOK` if you wish to apply custom processing to questions/answers)
 | CONNECT_ENABLE_VOICE_RESPONSE_INTERRUPT | true or false | Return bot response in session attribute to enable contact flow to use response as an interruptible prompt.
 | CONNECT_NEXT_PROMPT_VARNAME | text | Name of session var to use for next prompt
 | ENABLE_REDACTING | true or false | Enable the system to redact log output
+| ENABLE_REDACTING_WITH_COMPREHEND | true or false | Enables [Amazon Comprehend based PII Redacting](https://aws.amazon.com/blogs/machine-learning/detecting-and-redacting-pii-using-amazon-comprehend/)
+| COMPREHEND_REDACTING_ENTITY_TYPES | comma separated list | A list of [PII Entity Types](https://aws.amazon.com/blogs/machine-learning/detecting-and-redacting-pii-using-amazon-comprehend/)
+| COMPREHEND_REDACTING_CONFIDENCE_SCORE | number (0 to .99) | Only redact PII where Amazon Comprehend's confidence score is greater than this number
 | REDACTING_REGEX | regex expression | Redacts expressions matching regex from logs
 | PII_REJECTION_ENABLED | true or false | Enables PII Rejection
 | PII_REJECTION_QUESTION | text  | If PII is found, the user's request (question) will change to this phrase
-| PII_REJECTION_WITH_COMPREHEND: | true or false | Enable's [Personal Identifiable Information](https://aws.amazon.com/blogs/machine-learning/detecting-and-redacting-pii-using-amazon-comprehend/) detection with Amazon Comprehend
 | PII_REJECTION_REGEX | regex expression | Used to find PII based on a regex
-| PII_REJECTION_IGNORE_TYPES | comma separated list of [PII Entity Categories](https://aws.amazon.com/blogs/machine-learning/detecting-and-redacting-pii-using-amazon-comprehend/) | Do not detect the specified list of entity types
+| PII_REJECTION_ENTITY_TYPES | comma separated list of [PII Entity Categories](https://aws.amazon.com/blogs/machine-learning/detecting-and-redacting-pii-using-amazon-comprehend/) | Only recognize PII entity types in the list
+| PII_REJECTION_CONFIDENCE_SCORE | number (0 to 0.99) | Only reject PII where Amazon Comprehend's confidence score is greater than this number
 | DISABLE_CLOUDWATCH_LOGGING | true or false | Disable all logging in fulfillment es query handler lambda. does not disable logging from Lambda Hooks or Conditional Chaining Lambda functions
 | MINIMAL_ES_LOGGING | true or false | do not log utterances or session attributes to ElasticSearch for Kibana logging
 | S3_PUT_REQUEST_ENCRYPTION | text | enable header x-amz-server-side-encryption header and set with this value
 | BOT_ROUTER_WELCOME_BACK_MSG | text | The text used by QnABot when ending communication from a specialty bot
 | BOT_ROUTER_EXIT_MSGS | comma separated list | The exit phrases in comma separated list available for the a user to end communication with a specialty bot
 | RUN_LAMBDAHOOK_FROM_QUERY_STEP | true or false | Controls timing of execution for Lambda hooks
+| LAMBDA_PREPROCESS_HOOK | string | name of AWS Lambda to run before each question is processed. The name of the Lambda must start with "qna-" or "QNA-" to comply with the permissions of the role attached to the Fulfillment Lambda .
+| LAMBDA_POSTPROCESS_HOOK | string | name of AWS Lambda to run after the question is processed. But before user profile information is saved. The name of the Lambda must start with "qna-" or "QNA-" to comply with the permissions of the role attached to the Fulfillment Lambda .
+| SEARCH_REPLACE_QUESTION_SUBSTRINGS | string | replace words or phrases in user questions by defining search/replace pairs in a JSON object like: {"searchString":"replaceString"}. Add additional pairs separated by commas, like: {"searchString":"replaceString", "searchString2":"replaceString2"}.
+| EMBEDDINGS_ENABLE | true or false | Disable use of semantic search using embeddings. Set to TRIE only if QnABot stack was deployed with embeddings enabled.
+| EMBEDDINGS_SCORE_THRESHOLD | 0-1 | Unlike regular elasticsearch queries, embeddings queries always return scores between 0 and 1, so we can apply a threshold to separate good from bad results. If embedding similarity score is under threshold the match it's rejected and QnABot reverts to try to find a match on the answer field (only if ES_SCORE_ANSWER_FIELD is set to TRUE), Text item passage query, Kendra fallback or no_hits. Use the Content Designer TEST tab to see the hits ranked by score for your query results.
+| EMBEDDINGS_SCORE_ANSWER_THRESHOLD | 0-1 | Used only when ES_SCORE_ANSWER_FIELD is TRUE. If embedding similarity score for answer field query is under threshold the match is rejected and QnABot reverts to Text item passage query, Kendra fallback or no_hits. Use the Content Designer TEST tab to see the hits ranked by score for your answer field query results. For **Match on**, choose *qna item answer* to see answer field scores.
+| EMBEDDINGS_TEXT_PASSAGE_SCORE_THRESHOLD | 0-1 | If embedding similarity score for text item passage field query is under threshold the match it's rejected and QnABot reverts to Kendra fallback or no_hits. Use the Content Designer TEST tab to see the hits ranked by score for your answer field query results. For **Match on**, choose *text item passage* to see passage field scores. |
+| LLM_API                                  | SAGEMAKER, LAMBDA   | Specifies the LLM (Language Model) API used by the QnABot Stack based on the chosen value during deployment or update.                                                                                                              |
+| LLM_GENERATE_QUERY_ENABLE                | TRUE or FALSE   | Enables or disables question disambiguation using the LLM model.                                                                                                       |
+| LLM_GENERATE_QUERY_PROMPT_TEMPLATE       | Prompt template with placeholders: {history}, {input}       | The template used to construct a prompt for LLM to disambiguate follow-up questions. It can use placeholders to provide conversational context and the current user utterance/question.                                               |
+| LLM_GENERATE_QUERY_MODEL_PARAMS          | JSON string, e.g. `{"temperature":0}`    | Parameters sent to the LLM model when disambiguating follow-up questions.                                                                                             |
+| LLM_QA_ENABLE                           | TRUE or FALSE     | Enables or disables generative answers from passages retrieved via embeddings or Kendra fallback when no FAQ match is found. Applied only to passages and Kendra results - does not apply when an FAQ/QID matches the question.                                                |
+| LLM_QA_USE_KENDRA_RETRIEVAL_API          | TRUE or FALSE                                               | Enables or disables use of Kenda's new retrieval API. When enabled, QnABot uses Kendra Retrieve api to retrieve semantically relevant passages of up to 200 token words from the documents (not FAQs) in your index. When disabled, QnAbot use Kendra Query to retrieve shorter passages or answers. Takes effect only when LLM_QA_ENABLE is TRUE. The default is TRUE (recommended) when LLM QA is enabled. See https://docs.aws.amazon.com/kendra/latest/APIReference/API_Retrieve.html |
+| LLM_QA_PROMPT_TEMPLATE                   | Prompt template with placeholders: {context}, {history}, {input}, {query} | The template used to construct a prompt for LLM to generate an answer from the context of retrieved passages (from Kendra or Text Item passages).                                                                                  |
+| LLM_QA_NO_HITS_REGEX                     | Regular expression pattern                                  | If the LLM response matches the specified pattern (e.g., "Sorry, I don't know"), the response is treated as no_hits, and the default EMPTYMESSAGE or a custom 'no_hits' item is returned instead. Disabled by default, since enabling it prevents easy debugging of LLM don't know responses.                                |
+| LLM_QA_MODEL_PARAMS                     | JSON string, e.g. `{"temperature":0}`   | Parameters sent to the LLM model when generating answers to questions.                                                                                                |
+| LLM_QA_PREFIX_MESSAGE                   | Message used to prefix LLM-generated answer                 | May be empty.|
+| LLM_QA_SHOW_CONTEXT_TEXT                 | TRUE or FALSE                                               | Enables or disables inclusion of the passages used as context for LLM-generated answers.      |
+| LLM_QA_SHOW_SOURCE_LINKS                 | TRUE or FALSE                                               | Enables or disables Kendra Source Links or passage refMarkdown links (document references) in markdown answers.  |
+| LLM_CHAT_HISTORY_MAX_MESSAGES            | Positive integer  | Specifies the maximum number of previous messages maintained in the QnABot DynamoDB UserTable for conversational context and follow-up question disambiguation.         |

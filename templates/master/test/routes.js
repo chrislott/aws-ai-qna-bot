@@ -1,11 +1,10 @@
-var config=require('../../../config')
+var config=require('../../../config.json')
 process.env.AWS_PROFILE=config.profile
 process.env.AWS_DEFAULT_REGION=config.region
 var query=require('query-string').stringify
 var _=require('lodash')
 var zlib=require('zlib')
 var Promise=require('bluebird')
-var axios=require('axios')
 var Url=require('url')
 var sign=require('aws4').sign
 var fs=require('fs')
@@ -34,7 +33,7 @@ module.exports={
                     .tap(test.ok)
                     .tapCatch(()=>console.log("error",x.href))
                     .catch(test.ifError)
-                    
+
                 }))
             })
             .catch(test.ifError)
@@ -58,7 +57,7 @@ module.exports={
             })
             .catch(test.ifError)
             .finally(()=>test.done())
-        } 
+        }
     },
     health:{
         get:test=>run({
@@ -114,7 +113,7 @@ module.exports={
                 path:"examples",
                 method:"get"
             })
-           
+
             var documents=await api({
                 href:exampleHrefs._links.documents.href,
                 method:"get"
@@ -127,14 +126,14 @@ module.exports={
                     })
                 })
             )
-            test.done()    
+            test.done()
         },
         photos:async test=>{
             var exampleHrefs=await api({
                 path:"examples",
                 method:"get"
             })
-           
+
             var photos=await api({
                 href:exampleHrefs._links.photos.href,
                 method:"get"
@@ -150,7 +149,7 @@ module.exports={
                     })
                 })
             )
-            test.done()    
+            test.done()
         }
     },
     jobs:{

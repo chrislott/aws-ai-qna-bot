@@ -25,6 +25,8 @@ arn
 qid
 Nutritionix
 'qna'
+Logstash
+quniqueterms
 Node.js
 ap
 ctz
@@ -33,3 +35,16 @@ gotanswer
 qnabotcontext
 nnn-nn-nnnn
 Conne
+ssml
+cardtitle
+cardimageurl
+buttonvalue
+py_lambda_hooks
+ERRORMESSAGE
+qna
+qnabot
+postprocessing
+py
+js
+nodejs
+Opensearch

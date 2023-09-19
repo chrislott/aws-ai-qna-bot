@@ -1,5 +1,8 @@
-var fs=require('fs')
-var _=require('lodash')
+/* eslint-disable quotes */
+/* eslint-disable indent */
+var fs=require('fs');
+var _=require('lodash');
+const util = require('../util');
 
 var files=fs.readdirSync(`${__dirname}`)
     .filter(x=>!x.match(/README.md|Makefile|index|test|outputs|.DS_Store/))
@@ -29,14 +32,14 @@ module.exports=Object.assign(
                 ES_INDEX:{"Ref":"VarIndex"},
                 ES_ENDPOINT:{"Ref":"EsEndpoint"},
                 ES_PROXY:{"Ref":"EsProxyLambda"},
-                BOT_NAME:{"Ref":"BotName"},
-                BOT_ALIAS:{"Ref":"BotAlias"}
+                LEXV2_BOT_ID:{"Ref":"LexV2BotId"},
+                LEXV2_BOT_ALIAS_ID:{"Ref":"LexV2BotAliasId"}
             }
         },
         "Handler": "index.step",
         "MemorySize": "1280",
         "Role": {"Fn::GetAtt": ["TestAllRole","Arn"]},
-        "Runtime": "nodejs12.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 900,
         "VpcConfig" : {
           "Fn::If": [ "VPCEnabled", {
@@ -48,11 +51,15 @@ module.exports=Object.assign(
             "Fn::If": [ "XRAYEnabled", {"Mode": "Active"},
                 {"Ref" : "AWS::NoValue"} ]
         },
+        "Layers":[
+          {"Ref":"AwsSdkLayerLambdaLayer"}
+        ],
         "Tags":[{
             Key:"Type",
             Value:"TestAll"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     },
     "TestAllRole": {
       "Type": "AWS::IAM::Role",
@@ -70,12 +77,10 @@ module.exports=Object.assign(
           ]
         },
         "Path": "/",
-        "ManagedPolicyArns": [
-          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-          "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
-          "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
-        ],
         "Policies": [
+          util.basicLambdaExecutionPolicy(),
+          util.lambdaVPCAccessExecutionRole(),
+          util.xrayDaemonWriteAccess(),
           {
             "PolicyName" : "TestAllPolicy",
             "PolicyDocument" : {
@@ -83,7 +88,11 @@ module.exports=Object.assign(
               "Statement": [{
                   "Effect": "Allow",
                   "Action": [
-                    "s3:*"
+                    "s3:PutObject",
+                    "s3:GetObject",
+                    "s3:GetObjectVersion",
+                    "s3:DeleteObject",
+                    "s3:DeleteObjectVersion"
                   ],
                   "Resource":[{"Fn::Sub":"arn:aws:s3:::${TestAllBucket}*"}]
               },{
@@ -96,18 +105,18 @@ module.exports=Object.assign(
                 {
                   "Effect": "Allow",
                   "Action": [
-                      "lex:PostContent",
-                      "lex:PostText"
+                      "lex:RecognizeText"
                   ],
                   "Resource": [
-                      "*"
+                    {"Fn::Sub": "arn:${AWS::Partition}:lex:${AWS::Region}:${AWS::AccountId}:bot-alias/*/*"}
                   ]
                 }
               ]
             }
           }
         ]
-      }
+      },
+      "Metadata": util.cfnNag(["W11", "W12"])
     },
     "TestAllClear":{
         "Type": "Custom::S3Clear",

@@ -1,7 +1,10 @@
-var fs=require('fs')
-var _=require('lodash')
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
-var files=fs.readdirSync(`${__dirname}`)
+const fs=require('fs')
+const _=require('lodash')
+
+const files=fs.readdirSync(`${__dirname}`)
     .filter(x=>!x.match(/README.md|Makefile|index|test|.DS_Store/))
     .map(x=>require(`./${x}`))
 
@@ -9,8 +12,18 @@ module.exports={
   "Resources":_.assign.apply({},files),
   "Conditions": {},
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": `QnABot with admin and client websites - (Master v${process.env.npm_package_version})`,
-  "Mappings": {},
+  "Description": `(SO0189-ext) QnABot with admin and client websites - Version v${process.env.npm_package_version}`,
+  "Mappings": {
+    "Solution": {
+      "Data": {
+        "ID": "SO0189",
+        "Version": process.env.npm_package_version,
+        "AppRegistryApplicationName": "qnabot",
+        "SolutionName": "QnABot on AWS",
+        "ApplicationType": "AWS-Solutions"
+      }
+    }
+  },
   "Outputs": {
     "CognitoEndpoint":{
         "Value":{"Fn::GetAtt":["DesignerLogin","Domain"]}
@@ -22,26 +35,53 @@ module.exports={
       "Value":{"Ref":"ImportBucket"}
     },
     "BotConsoleUrl":{
+      "Condition": "CreateLexV1Bots",
       "Value":{"Fn::Join":["",[
         "https://console.aws.amazon.com/lex/home?",
         "region=",{"Ref":"AWS::Region"},
         "#bot-editor:bot=",{"Ref":"LexBot"}
       ]]}
     },
-    "BotName":{
+    "LexV1BotName":{
+        "Condition": "CreateLexV1Bots",
         "Value":{"Ref":"LexBot"}
     },
-    "BotAlias":{
+    "LexV1BotAlias":{
+        "Condition": "CreateLexV1Bots",
         "Value":{"Ref":"VersionAlias"}
     },
-    "SlotType":{
+    "LexV1SlotType":{
+        "Condition": "CreateLexV1Bots",
         "Value":{"Ref":"SlotType"}
     },
-    "Intent":{
+    "LexV1Intent":{
+        "Condition": "CreateLexV1Bots",
         "Value":{"Ref":"Intent"}
     },
-    "IntentFallback":{
+    "LexV1IntentFallback":{
+        "Condition": "CreateLexV1Bots",
         "Value":{"Ref":"IntentFallback"}
+    },
+    "LexV2BotName":{
+        "Value":{"Fn::GetAtt":["LexV2Bot","botName"]}
+    },
+    "LexV2BotId":{
+        "Value":{"Fn::GetAtt":["LexV2Bot","botId"]}
+    },
+    "LexV2BotAlias":{
+        "Value":{"Fn::GetAtt":["LexV2Bot","botAlias"]}
+    },
+    "LexV2BotAliasId":{
+        "Value":{"Fn::GetAtt":["LexV2Bot","botAliasId"]}
+    },
+    "LexV2Intent":{
+        "Value":{"Fn::GetAtt":["LexV2Bot","botIntent"]}
+    },
+    "LexV2IntentFallback":{
+        "Value":{"Fn::GetAtt":["LexV2Bot","botIntentFallback"]}
+    },
+    "LexV2BotLocaleIds":{
+        "Value":{"Fn::GetAtt":["LexV2Bot","botLocaleIds"]}
     },
     "DashboardURL":{
         "Value":{"Fn::Join":["",[
@@ -122,7 +162,13 @@ module.exports={
     },
     "DefaultUserPoolJwksUrlParameterName": {
       "Value":{"Ref":"DefaultUserPoolJwksUrl"}
-    }
+    },
+    "FeedbackSNSTopic": {
+        "Value":{"Fn::GetAtt": ["ExamplesStack", "Outputs.FeedbackSNSTopic"]}
+    },
+    "MetricsBucket": {
+        "Value":{"Ref":"MetricsBucket"}
+      }
   },
   "Parameters": {
     "ElasticsearchName":{
@@ -137,7 +183,7 @@ module.exports={
     },
     "Encryption":{
         "Type":"String",
-        "Description":"Enables encryption at rest for S3 and ElasticSearch, and provisions c5.large.elasticsearch instances - recommended for production deployments. Selecting the unencrypted configuration provisions lower cost t3.small.elasticsearch instances. See https://aws.amazon.com/elasticsearch-service/pricing/.",
+        "Description":"Enables encryption at rest for S3 and ElasticSearch, and provisions m6g.large.elasticsearch instances - recommended for production deployments. Selecting the unencrypted configuration provisions lower cost t3.small.elasticsearch instances. See https://aws.amazon.com/elasticsearch-service/pricing/.",
         "AllowedValues": ["ENCRYPTED", "UNENCRYPTED"],
         "Default":"ENCRYPTED",
         "ConstraintDescription":"Allowed Values are UNENCRYPTED or ENCRYPTED"
@@ -177,21 +223,50 @@ module.exports={
         "Type":"String",
         "Description":"Choose whether access to the QnABot client should be publicly available or restricted to users in QnABot UserPool.",
         "AllowedValues" : ["PUBLIC", "PRIVATE"],
-        "Default":"PUBLIC"
+        "Default":"PRIVATE"
     },
     "ElasticSearchNodeCount":{
         "Type":"String",
         "Description":"Number of nodes in ElasticSearch domain - '4' is recommended for fault tolerant production deployments.",
-        "AllowedValues" : ["2", "4"],
+        "AllowedValues" : ["1", "2", "4"],
         "Default":"4"
     },
+    "ElasticSearchEBSVolumeSize":{
+        "Type":"Number",
+        "Description":"Size in GB of each EBS volume attached to OpenSearch node instances - '10' is the minimum default volume size.",
+        "Default":10
+    },
+    "FulfillmentConcurrency": {
+      "Type":"Number",
+      "Description":"The amount of provisioned concurrency for the fulfillment Lambda function",
+      "Default": 0
+    },
     "VPCSubnetIdList" : {
-        "Description" : "Subnet IDs", "Type": "CommaDelimitedList",
+        "Type": "CommaDelimitedList",
+        "Description" : "Subnet IDs",
         "Default": ""
     },
     "VPCSecurityGroupIdList": {
-        "Description" : "Security Group IDs", "Type": "CommaDelimitedList",
+        "Type": "CommaDelimitedList",
+        "Description" : "Security Group IDs",
         "Default": ""
+    },
+    "LexV2BotLocaleIds":{
+        "Description" : "Languages for QnABot voice interaction using LexV2. Specify as a comma separated list of valid Locale IDs without empty spaces - see https://github.com/aws-solutions/aws-qnabot/blob/main/docs/multilanguage_support.md#supported-languages",
+        "Type": "String",
+        "Default": "en_US,es_US,fr_CA"
+    },
+    "LexBotVersion":{
+        "Description" : "Lex versions to use for QnABot. Select 'LexV2 Only' to install QnABot in AWS reqions where LexV1 is not supported.",
+        "Type":"String",
+        "AllowedValues" : ["LexV1 and LexV2", "LexV2 Only"],
+        "Default":"LexV2 Only"
+    },
+    "InstallLexResponseBots":{
+      "Description" : "If Elicit Response feature is not needed, choose 'false' to skip sample Lex Response Bot installation.",
+      "Type":"String",
+      "AllowedValues" : ["true", "false"],
+      "Default":"true"
     },
     "XraySetting":{
         "Type":"String",
@@ -204,6 +279,54 @@ module.exports={
         "Type":"Number",
         "Description": "To conserve storage in Amazon ElasticSearch, metrics and feedback data used to populate the Kibana dashboard are automatically deleted after this period (default 43200 minutes = 30 days). Monitor 'Free storage space' for your ElasticSearch domain to ensure that you have sufficient space available to store data for the desired retention period.",
         "Default":43200
+    },
+    "EmbeddingsApi":{
+      "Type":"String",
+      "Description":"Optionally enable (experimental) QnABot Semantics Search using Embeddings from a pre-trained Large Language Model. If set to SAGEMAKER, an ml.m5.xlarge Sagemaker endpoint is automatically provisioned with Hugging Face e5-large model. To use a custom LAMBDA function, provide additional parameters below.",
+      "AllowedValues": ["DISABLED", "SAGEMAKER", "LAMBDA"],
+      "Default":"DISABLED"
+    },
+    "SagemakerInitialInstanceCount":{
+      "Type":"Number",
+      "MinValue":0,
+      "Description":"Optional: If EmbeddingsApi is SAGEMAKER, provide initial instance count. Set to '0' to enable Serverless Inference (for cold-start delay tolerant deployments only).",
+      "Default":1
+    },
+    "EmbeddingsLambdaArn":{
+      "Type":"String",
+      "AllowedPattern": "^(|arn:aws:lambda:.*)$",
+      "Description":"Optional: If EmbeddingsApi is LAMBDA, provide ARN for a Lambda function that takes JSON {\"inputtext\":\"string\"}, and returns JSON {\"embedding\":[...]}",
+      "Default":""
+    },
+    "EmbeddingsLambdaDimensions":{
+      "Type":"Number",
+      "MinValue":1,
+      "Description":"Optional: If EmbeddingsApi is LAMBDA, provide number of dimensions for embeddings returned by the EmbeddingsLambda function specified above.",
+      "Default":4096
+    },
+    'LLMApi':{
+      'Type':'String',
+      'Description':'Optionally enable (experimental) QnABot question disambiguation and generative question answering using an LLM. If set to SAGEMAKER, a Sagemaker endpoint is automatically provisioned. To use a custom LAMBDA function, provide additional parameters below.',
+      'AllowedValues': ['DISABLED', 'SAGEMAKER', 'LAMBDA'],
+      'Default':'DISABLED'
+    },
+    'LLMSagemakerInstanceType':{
+      'Type':'String',
+      'AllowedPattern':'^ml.*$',
+      'Description':'Optional: If LLMApi is SAGEMAKER, provide the SageMaker endpoint instance type. Defaults to ml.g5.12xlarge. Check account and region availability through the Service Quotas service before deploying',
+      'Default':'ml.g5.12xlarge'
+    },
+    'LLMSagemakerInitialInstanceCount':{
+      'Type':'Number',
+      'MinValue':1,
+      'Description':'Optional: If LLMApi is SAGEMAKER, provide initial instance count. Serverless Inference is not currently available for the built-in LLM model.',
+      'Default':1
+    },
+    'LLMLambdaArn':{
+      'Type':'String',
+      'AllowedPattern': '^(|arn:aws:lambda:.*)$',
+      'Description':'Optional: If LLMApi is LAMBDA, provide ARN for a Lambda function that takes JSON {"prompt":"string", "settings":{key:value,..}}, and returns JSON {"generated_text":"string"}',
+      'Default':''
     }
   },
   "Conditions":{
@@ -215,15 +338,23 @@ module.exports={
     "BuildExamples":{"Fn::Equals":[{"Ref":"BuildExamples"},"TRUE"]},
     "CreateDomain":{"Fn::Equals":[{"Ref":"ElasticsearchName"},"EMPTY"]},
     "DontCreateDomain":{"Fn::Not":[{"Fn::Equals":[{"Ref":"ElasticsearchName"},"EMPTY"]}]},
+    "CreateLexV1Bots":{"Fn::Equals":[{"Ref":"LexBotVersion"},"LexV1 and LexV2"]},
     "VPCEnabled": { "Fn::Not": [
               { "Fn::Equals": [ "",
                       { "Fn::Join": [ "", { "Ref": "VPCSecurityGroupIdList" } ] }
                   ] }
-          ] }
+          ] },
+    "CreateConcurrency":{ "Fn::Not": [
+      {"Fn::Equals":[{"Ref":"FulfillmentConcurrency"},"0"]}
+    ]},
+    "SingleNode": {"Fn::Equals":[{"Ref":"ElasticSearchNodeCount"},"1"]},
+    "EmbeddingsEnable":{"Fn::Not": [{ "Fn::Equals":[{"Ref":"EmbeddingsApi"},"DISABLED"]}]},
+    "EmbeddingsSagemaker":{"Fn::Equals":[{"Ref":"EmbeddingsApi"},"SAGEMAKER"]},
+    "EmbeddingsLambda":{"Fn::Equals":[{"Ref":"EmbeddingsApi"},"LAMBDA"]},
+    "EmbeddingsLambdaArn":{"Fn::Not": [{ "Fn::Equals":[{"Ref":"EmbeddingsLambdaArn"},""]}]},
+    'LLMEnable':{'Fn::Not': [{ 'Fn::Equals':[{'Ref':'LLMApi'},'DISABLED']}]},
+    "LLMSagemaker":{"Fn::Equals":[{"Ref":"LLMApi"},"SAGEMAKER"]},
+    "LLMLambda":{"Fn::Equals":[{"Ref":"LLMApi"},"LAMBDA"]},
+    'LLMLambdaArn':{'Fn::Not': [{ 'Fn::Equals':[{'Ref':'LLMLambdaArn'},'']}]},
   }
 }
-
-
-
-
-

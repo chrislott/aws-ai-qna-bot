@@ -3,6 +3,10 @@ var lex=require('./lex')
 var alexa=require('./alexa')
 var _=require('lodash')
 var util=require('./util')
+var translate = require('./multilanguage.js')
+const qnabot = require("qnabot/logging")
+
+
 
 function sms_hint(req,res) {
     var hint = "";
@@ -13,7 +17,7 @@ function sms_hint(req,res) {
             var hours = req._userInfo.TimeSinceLastInteraction / 36e5;
             if (hours >= interval_hrs) {
                 hint = hint_message;
-                console.log("Appending hint to SMS answer: ", hint);
+                qnabot.log("Appending hint to SMS answer: ", hint);
             }
         }
     }
@@ -29,30 +33,53 @@ function split_message(message) {
     return parts;
 }
 
-function connect_response(req, res) {
-    if (req._clientType == "LEX.AmazonConnect.Voice") {
-        if (_.get(req,"_settings.CONNECT_ENABLE_VOICE_RESPONSE_INTERRUPT")) {
-            console.log("CONNECT_ENABLE_VOICE_RESPONSE_INTERRUPT is true. splitting response.")
-            // split multi sentence responses.. First sentence stays in response, remaining sentences get prepended to next prompt session attribute.
-            let nextPromptVarName = _.get(req,"_settings.CONNECT_NEXT_PROMPT_VARNAME",'nextPrompt') ;
-            let message = res.message ;
-            let prompt = _.get(res.session,nextPromptVarName,"").replace(/<speak>|<\/speak>/g, "") ;
-            if (res.type == "PlainText") {
-                // process plain text
-                let a = split_message(message) ; //split on first period
-                res.message = a[0];
-                _.set(res.session,nextPromptVarName,a[1] + " " + prompt);
-            } else if (res.type == "SSML") {
-                // process SSML
-                // strip <speak> tags
-                message = message.replace(/<speak>|<\/speak>/g, "");
-                let a = split_message(message) ;
-                res.message = "<speak>" + a[0] + "</speak>" ;
-                _.set(res.session,nextPromptVarName, "<speak>" + a[1] + " " + prompt + "</speak>");
-            }
-            console.log("Response message:", res.message);
-            console.log("Reponse session var:", nextPromptVarName, ":", _.get(res.session,nextPromptVarName)) ;
+
+async function connect_response(req, res) {
+    // If QnABot is in multi language mode, translate NextPrompt into target language
+    if (_.get(req._settings, 'ENABLE_MULTI_LANGUAGE_SUPPORT')){
+        const locale = _.get(req, 'session.qnabotcontext.userLocale');
+        let nextPromptVarName = _.get(req,"_settings.CONNECT_NEXT_PROMPT_VARNAME",'nextPrompt') ;
+        let prompt = _.get(res.session,nextPromptVarName,"");
+        if (prompt) {
+            prompt = await translate.get_translation(prompt,'auto',locale,req);
         }
+        _.set(res.session,nextPromptVarName,prompt);
+    }
+    // If in elicit response, set next prompt to empty
+    if ( _.get(res,"session.qnabotcontext.elicitResponse.responsebot")) {
+        let nextPromptVarName = _.get(req,"_settings.CONNECT_NEXT_PROMPT_VARNAME",'nextPrompt') ;
+        _.set(res.session,nextPromptVarName,"");
+    }
+
+    // Split multi-part sentences to enable barge in for long fulfillment messages when using Connect voice.. 
+    // except when QnAbot is in ElicitResoonse mode.. in that case we keep the bot session with GetCustomerInput block open, so 
+    // the Connect contact flow loop is not invoked (and CONNECT_NEXT_PROMPT would not be played)
+    if (req._clientType == "LEX.AmazonConnect.Voice") {
+        if (! _.get(res,"session.qnabotcontext.elicitResponse.responsebot")) {
+            // QnABot is not doing elicitResponse
+            if (_.get(req,"_settings.CONNECT_ENABLE_VOICE_RESPONSE_INTERRUPT")) {
+                let nextPromptVarName = _.get(req,"_settings.CONNECT_NEXT_PROMPT_VARNAME",'nextPrompt') ;
+                qnabot.log("CONNECT_ENABLE_VOICE_RESPONSE_INTERRUPT is true. splitting response.")
+                // split multi sentence responses.. First sentence stays in response, remaining sentences get prepended to next prompt session attribute.
+                let message = res.message ;
+                let prompt = _.get(res.session,nextPromptVarName,"").replace(/<speak>|<\/speak>/g, "") ;
+                if (res.type == "PlainText") {
+                    // process plain text
+                    let a = split_message(message) ; //split on first period
+                    res.message = a[0];
+                    _.set(res.session,nextPromptVarName,a[1] + " " + prompt);
+                } else if (res.type == "SSML") {
+                    // process SSML
+                    // strip <speak> tags
+                    message = message.replace(/<speak>|<\/speak>/g, "");
+                    let a = split_message(message) ;
+                    res.message = "<speak>" + a[0] + "</speak>" ;
+                    _.set(res.session,nextPromptVarName, "<speak>" + a[1] + " " + prompt + "</speak>");
+                }
+                qnabot.log("Response message:", res.message);
+                qnabot.log("Reponse session var:", nextPromptVarName, ":", _.get(res.session,nextPromptVarName)) ;
+            }
+        } 
     }
     return res ;
 }
@@ -100,7 +127,7 @@ module.exports=async function assemble(req,res){
     res.message += sms_hint(req,res);
     
     // enable interruptable bot response for Connect
-    res = connect_response(req,res);
+    res = await connect_response(req,res);
 
     
     res.session=_.mapValues(
@@ -109,7 +136,6 @@ module.exports=async function assemble(req,res){
     )
 
     resetAttributes(req,res);
-
     switch(req._type){
         case 'LEX':
             res.out=lex.assemble(req,res)

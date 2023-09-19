@@ -1,12 +1,15 @@
-var config = require('./config')
-var _ = require('lodash')
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
-var examples = _.fromPairs(require('../../examples/outputs')
+const _ = require('lodash');
+const util = require('../../util');
+
+const examples = _.fromPairs(require('../../examples/outputs')
   .names
   .map(x => {
     return [x, { "Fn::GetAtt": ["ExamplesStack", `Outputs.${x}`] }]
   }))
-var responsebots = _.fromPairs(require('../../examples/examples/responsebots')
+const responsebots = _.fromPairs(require('../../examples/examples/responsebots-lexv2')
   .names
   .map(x => {
     return [x, { "Fn::GetAtt": ["ExamplesStack", `Outputs.${x}`] }]
@@ -15,9 +18,13 @@ var responsebots = _.fromPairs(require('../../examples/examples/responsebots')
 module.exports = {
   "Alexa": {
     "Type": "AWS::Lambda::Permission",
+    "DependsOn": "FulfillmentLambdaAliaslive",
     "Properties": {
       "Action": "lambda:InvokeFunction",
-      "FunctionName": { "Fn::GetAtt": ["FulfillmentLambda", "Arn"] },
+      "FunctionName": {  "Fn::Join": [ ":", [
+        {"Fn::GetAtt":["FulfillmentLambda","Arn"]},
+        "live"
+      ]]},
       "Principal": "alexa-appkit.amazon.com"
     }
   },
@@ -32,12 +39,15 @@ module.exports = {
   },
   "FulfillmentLambda": {
     "Type": "AWS::Lambda::Function",
+    "DependsOn": "FulfillmentCodeVersion",
     "Properties": {
       "Code": {
-        "S3Bucket": { "Ref": "BootstrapBucket" },
-        "S3Key": { "Fn::Sub": "${BootstrapPrefix}/lambda/fulfillment.zip" },
-        "S3ObjectVersion": { "Ref": "FulfillmentCodeVersion" }
+        "S3Bucket": {"Ref": "BootstrapBucket"},
+        "S3Key": {"Fn::Sub": "${BootstrapPrefix}/lambda/fulfillment.zip"},
+        "S3ObjectVersion": {"Ref": "FulfillmentCodeVersion"}
       },
+      //Note: updates to this lambda function do not automatically generate a new version
+      //if making changes here, be sure to update FulfillmentLambdaVersionGenerator as appropriate
       "Environment": {
         "Variables": Object.assign({
           ES_TYPE: { "Fn::GetAtt": ["Var", "QnAType"] },
@@ -51,27 +61,123 @@ module.exports = {
           DEFAULT_USER_POOL_JWKS_PARAM: { "Ref": "DefaultUserPoolJwksUrl" },
           DEFAULT_SETTINGS_PARAM: { "Ref": "DefaultQnABotSettings" },
           CUSTOM_SETTINGS_PARAM: { "Ref": "CustomQnABotSettings" },
+          EMBEDDINGS_API: { "Ref": "EmbeddingsApi" },
+          EMBEDDINGS_SAGEMAKER_ENDPOINT : {
+            "Fn::If": [
+                "EmbeddingsSagemaker",
+                {"Fn::GetAtt": ["SagemakerEmbeddingsStack", "Outputs.EmbeddingsSagemakerEndpoint"] },
+                ""
+            ]
+          },
+          EMBEDDINGS_SAGEMAKER_INSTANCECOUNT : { "Ref": "SagemakerInitialInstanceCount" },
+          EMBEDDINGS_LAMBDA_ARN: { "Ref": "EmbeddingsLambdaArn" },
+          LLM_API: { "Ref": "LLMApi" },
+          LLM_SAGEMAKERENDPOINT : {
+            "Fn::If": [
+                "LLMSagemaker",
+                {"Fn::GetAtt": ["SageMakerQASummarizeLLMStack", "Outputs.LLMSagemakerEndpoint"] },
+                ""
+            ]
+          },
+          LLM_SAGEMAKERINSTANCECOUNT : { "Ref": "LLMSagemakerInitialInstanceCount" }, // force new fn version when instance count changes
+          LLM_LAMBDA_ARN: { "Ref": "LLMLambdaArn" },
         }, examples, responsebots)
       },
       "Handler": "index.handler",
-      "MemorySize": "1408",
-      "Role": { "Fn::GetAtt": ["FulfillmentLambdaRole", "Arn"] },
-      "Runtime": "nodejs12.x",
+      "Layers":[
+        {"Ref":"AwsSdkLayerLambdaLayer"},
+        {"Ref":"CommonModulesLambdaLayer"},
+        {"Ref":"EsProxyLambdaLayer"},
+        {"Ref":"QnABotCommonLambdaLayer"}
+      ],
+      "MemorySize": 1408,
+      "Role": {"Fn::GetAtt": ["FulfillmentLambdaRole", "Arn"]},
+      "Runtime": process.env.npm_package_config_lambdaRuntime,
       "Timeout": 300,
+      "TracingConfig": {
+        "Mode": {
+          "Fn::If": [
+            "XRAYEnabled",
+            "Active",
+            "PassThrough"
+          ]
+        }
+      },
+      "Tags": [
+        {
+          "Key": "Type",
+          "Value": "Fulfillment"
+        }
+      ],
       "VpcConfig" : {
-        "Fn::If": [ "VPCEnabled", {
-          "SubnetIds": {"Ref": "VPCSubnetIdList"},
-          "SecurityGroupIds": {"Ref": "VPCSecurityGroupIdList"}
-        }, {"Ref" : "AWS::NoValue"} ]
+        "Fn::If": [
+          "VPCEnabled",
+          {
+            "SubnetIds": {"Ref": "VPCSubnetIdList"},
+            "SecurityGroupIds": {"Ref": "VPCSecurityGroupIdList"}
+          },
+          {"Ref" : "AWS::NoValue"}
+        ]
+      }
+    },
+    "Metadata": util.cfnNag(["W89", "W92"])
+  },
+  "FulfillmentLambdaVersionGenerator": {
+    "Type": "Custom::LambdaVersion",
+    //this custom resource takes no action on deletes as we keep all versions
+    //the lambda versions will be deleted along with it's parent Lambda Function
+    //setting DeletionPolicy of Retain to prevent CFNLambda failures on rollbacks to old versions
+    "DeletionPolicy" : "Retain",
+    "Properties": {
+      "ServiceToken": { "Fn::GetAtt": ["CFNLambda", "Arn"] },
+      "FunctionName": {"Ref": "FulfillmentLambda"},
+      "Triggers": { //The set of triggers to kick off a Custom Resource Update event
+        "FulfillmentCodeVersionTrigger": [
+          {"Ref": "FulfillmentCodeVersion"}
+        ],
+        "LayersTrigger": [
+          {"Ref": "AwsSdkLayerLambdaLayer"},
+          {"Ref": "CommonModulesLambdaLayer"},
+          {"Ref": "EsProxyLambdaLayer"},
+          {"Ref": "QnABotCommonLambdaLayer"}
+        ],
+        "EmbeddingsTrigger": [
+          {"Ref": "EmbeddingsApi"},
+          {"Ref": "SagemakerInitialInstanceCount"},
+          {"Fn::If": [
+              "EmbeddingsSagemaker",
+              {"Fn::GetAtt": ["SagemakerEmbeddingsStack", "Outputs.EmbeddingsSagemakerEndpoint"]},
+              ""
+          ]},
+          {"Ref": "EmbeddingsLambdaArn"}
+        ],
+        "QASummarizeTrigger": [
+          {"Ref": "LLMApi"},
+          {"Ref": "SagemakerInitialInstanceCount"},
+          {"Fn::If": [
+                "LLMSagemaker",
+                {"Fn::GetAtt": ["SageMakerQASummarizeLLMStack", "Outputs.LLMSagemakerEndpoint"] },
+                ""
+          ]},
+          {"Ref": "LLMLambdaArn"}
+        ]
+      }
+    }
+  },
+  "FulfillmentLambdaAliaslive": {
+    "Type": "AWS::Lambda::Alias",
+    "DependsOn": "FulfillmentLambdaVersionGenerator",
+    "Properties": {
+      "FunctionName": {"Ref": "FulfillmentLambda"},
+      "FunctionVersion": {"Fn::GetAtt": ["FulfillmentLambdaVersionGenerator", "Version"]},
+      "Name": "live",
+      "ProvisionedConcurrencyConfig": {
+        "Fn::If": [
+          "CreateConcurrency",
+          {"ProvisionedConcurrentExecutions": {"Ref": "FulfillmentConcurrency"}},
+          {"Ref" : "AWS::NoValue"}
+        ]
       },
-      "TracingConfig" : {
-        "Fn::If": [ "XRAYEnabled", {"Mode": "Active"},
-          {"Ref" : "AWS::NoValue"} ]
-      },
-      "Tags": [{
-        Key: "Type",
-        Value: "Fulfillment"
-      }]
     }
   },
   "InvokePolicy": {
@@ -91,6 +197,8 @@ module.exports = {
             { "Fn::GetAtt": ["ESProxyLambda", "Arn"] },
             { "Fn::GetAtt": ["ESLoggingLambda", "Arn"] },
             { "Fn::GetAtt": ["ESQidLambda", "Arn"] },
+            { "Fn::If": ["EmbeddingsLambdaArn", {"Ref":"EmbeddingsLambdaArn"}, {"Ref":"AWS::NoValue"}] },
+            { "Fn::If": ["LLMLambdaArn", {"Ref":"LLMLambdaArn"}, {"Ref":"AWS::NoValue"}] },
           ].concat(require('../../examples/outputs').names
             .map(x => {
               return { "Fn::GetAtt": ["ExamplesStack", `Outputs.${x}`] }
@@ -108,11 +216,12 @@ module.exports = {
         "Statement": [{
           "Effect": "Allow",
           "Action": [
-            "lex:PostText"
+            "lex:PostText",
+            "lex:RecognizeText"
           ],
           "Resource": [
             "arn:aws:lex:*:*:bot:QNA*",
-            "arn:aws:lex:*:*:bot:QnA*",
+            "arn:aws:lex:*:*:bot*",
           ]
         }]
       },
@@ -136,14 +245,14 @@ module.exports = {
       },
       "Path": "/",
       "ManagedPolicyArns": [
-        "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-        "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
-        "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess",
-        "arn:aws:iam::aws:policy/TranslateReadOnly",
-        "arn:aws:iam::aws:policy/ComprehendReadOnly",
         { "Ref": "QueryPolicy" }
       ],
       "Policies": [
+        util.basicLambdaExecutionPolicy(),
+        util.lambdaVPCAccessExecutionRole(),
+        util.xrayDaemonWriteAccess(),
+        util.translateReadOnly(),
+        util.comprehendReadOnly(),
         {
           "PolicyName": "ParamStorePolicy",
           "PolicyDocument": {
@@ -208,7 +317,49 @@ module.exports = {
             }]
           }
         },
-        { 
+        {
+          "Fn::If": [
+            "EmbeddingsSagemaker",
+            {
+              "PolicyName" : "EmbeddingsSagemakerInvokeEndpointAccess",
+              "PolicyDocument" : {
+              "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Action": [
+                        "sagemaker:InvokeEndpoint"
+                    ],
+                    "Resource": {"Fn::GetAtt": ["SagemakerEmbeddingsStack", "Outputs.EmbeddingsSagemakerEndpointArn"]}
+                  }
+                ]
+              }
+            },
+            {"Ref":"AWS::NoValue"}
+          ]
+        },
+        {
+          "Fn::If": [
+            "LLMSagemaker",
+            {
+              "PolicyName" : "LLMSagemakerInvokeEndpointAccess",
+              "PolicyDocument" : {
+              "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Action": [
+                        "sagemaker:InvokeEndpoint"
+                    ],
+                    "Resource": {"Fn::GetAtt": ["SageMakerQASummarizeLLMStack", "Outputs.LLMSagemakerEndpointArn"]}
+                  }
+                ]
+              }
+            },
+            {"Ref":"AWS::NoValue"}
+          ]
+        },
+        {
           "PolicyName" : "S3QNABucketReadAccess",
           "PolicyDocument" : {
           "Version": "2012-10-17",
@@ -217,7 +368,7 @@ module.exports = {
                   "Effect": "Allow",
                   "Action": [
                       "s3:GetObject"
-                   ],   
+                   ],
                   "Resource": [
                       "arn:aws:s3:::QNA*/*",
                       "arn:aws:s3:::qna*/*"
@@ -227,7 +378,160 @@ module.exports = {
           }
         }
       ]
+    },
+    "Metadata": util.cfnNag(["W11", "W12"])
+  },
+  "ESWarmerLambda": {
+    "Type": "AWS::Lambda::Function",
+    "Properties": {
+      "Code": {
+        "S3Bucket": { "Ref": "BootstrapBucket" },
+        "S3Key": { "Fn::Sub": "${BootstrapPrefix}/lambda/fulfillment.zip" },
+        "S3ObjectVersion": { "Ref": "FulfillmentCodeVersion" }
+      },
+      "Environment": {
+        "Variables": Object.assign({
+          REPEAT_COUNT:  "4",
+          TARGET_PATH: "_search",
+          TARGET_INDEX: { "Fn::GetAtt": ["Var","QnaIndex"] },
+          TARGET_URL: { "Fn::GetAtt": ["ESVar", "ESAddress"] },
+          DEFAULT_SETTINGS_PARAM: { "Ref": "DefaultQnABotSettings" },
+          CUSTOM_SETTINGS_PARAM: { "Ref": "CustomQnABotSettings" },
+        })
+      },
+      "Handler": "index.warmer",
+      "MemorySize": "512",
+      "Role": { "Fn::GetAtt": ["WarmerLambdaRole", "Arn"] },
+      "Runtime": process.env.npm_package_config_lambdaRuntime,
+      "Timeout": 300,
+      "Layers": [
+        {"Ref": "AwsSdkLayerLambdaLayer"},
+        {"Ref": "CommonModulesLambdaLayer"},
+        {"Ref": "EsProxyLambdaLayer"},
+        {"Ref":"QnABotCommonLambdaLayer"}
+      ],
+      "VpcConfig" : {
+        "Fn::If": [ "VPCEnabled", {
+          "SubnetIds": {"Ref": "VPCSubnetIdList"},
+          "SecurityGroupIds": {"Ref": "VPCSecurityGroupIdList"}
+        }, {"Ref" : "AWS::NoValue"} ]
+      },
+      "TracingConfig" : {
+        "Fn::If": [ "XRAYEnabled", {"Mode": "Active"},
+          {"Ref" : "AWS::NoValue"} ]
+      },
+      "Tags": [{
+        Key: "Type",
+        Value: "Warmer"
+      }]
+    },
+    "Metadata": util.cfnNag(["W92"])
+  },
+  "WarmerLambdaRole": {
+    "Type": "AWS::IAM::Role",
+    "Properties": {
+      "AssumeRolePolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "lambda.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+          }
+        ]
+      },
+      "Path": "/",
+      "Policies": [
+        util.basicLambdaExecutionPolicy(),
+        util.lambdaVPCAccessExecutionRole(),
+        util.xrayDaemonWriteAccess(),
+        {
+          "PolicyName": "ParamStorePolicy",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Effect": "Allow",
+              "Action": [
+                "ssm:GetParameter",
+                "ssm:GetParameters"
+              ],
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "", [
+                      "arn:aws:ssm:",
+                      { "Fn::Sub": "${AWS::Region}:" },
+                      { "Fn::Sub": "${AWS::AccountId}:" },
+                      "parameter/",
+                      { "Ref": "DefaultQnABotSettings" }
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "", [
+                      "arn:aws:ssm:",
+                      { "Fn::Sub": "${AWS::Region}:" },
+                      { "Fn::Sub": "${AWS::AccountId}:" },
+                      "parameter/",
+                      { "Ref": "CustomQnABotSettings" }
+                    ]
+                  ]
+                }
+              ]
+            },
+              {
+              "Sid": "AllowES",
+              "Effect": "Allow",
+              "Action": [
+                "es:ESHttpGet",
+              ],
+              "Resource": [
+                "*"
+              ]
+            }]
+          }
+        }
+      ]
+    },
+    "Metadata": util.cfnNag(["W11", "W12"])
+  },
+  "ESWarmerRule": {
+    "Type": "AWS::Events::Rule",
+    "Properties": {
+      "ScheduleExpression": "rate(1 minute)",
+      "Targets": [
+        {
+          "Id": "ESWarmerScheduler",
+          "Arn": {
+            "Fn::GetAtt": [
+              "ESWarmerLambda",
+              "Arn"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "ESWarmerRuleInvokeLambdaPermission": {
+    "Type": "AWS::Lambda::Permission",
+    "Properties": {
+      "FunctionName": {
+        "Fn::GetAtt": [
+          "ESWarmerLambda",
+          "Arn"
+        ]
+      },
+      "Action": "lambda:InvokeFunction",
+      "Principal": "events.amazonaws.com",
+      "SourceArn": {
+        "Fn::GetAtt": [
+          "ESWarmerRule",
+          "Arn"
+        ]
+      }
     }
   }
 }
-

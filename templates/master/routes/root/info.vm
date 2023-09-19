@@ -1,11 +1,14 @@
-#set ( $root="https://${!context.apiId}.execute-api.${!stageVariables.Region}.amazonaws.com/${!context.stage}")
+#set ($root="https://${!context.domainName}/${!context.stage}")
 
 {
     "region":"${!stageVariables.Region}",
     "Version":"${InfoVar.Version}",
     "BuildDate":"${InfoVar.BuildDateString}",
-    "BotName":"${LexBot}",
-    "BotVersion":"${VersionAlias}",
+    "BotName":"Use LexV2 bot",
+    "BotVersion":"$LATEST",
+    "v2BotId": "${LexV2Bot.botId}",
+    "v2BotAliasId": "${LexV2Bot.botAliasId}",
+    "v2BotLocaleId": "${LexV2BotLocaleIds}",
     "PoolId":"${IdPool}",
     "StackName":"${AWS::StackName}",
     "ClientIdClient":"${ClientClient}",
@@ -25,6 +28,9 @@
         "crawler":{
             "href":"$root/crawler"
         },
+        "crawlerV2":{
+            "href":"$root/kendranativecrawler"
+        },
         "bot":{
             "href":"$root/bot"
         },
@@ -33,6 +39,9 @@
         },
         "connect":{
             "href":"$root/connect"
+        },
+        "genesys":{
+            "href":"$root/genesys"
         },
         "translate":{
             "href":"$root/translate"

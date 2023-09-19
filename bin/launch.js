@@ -1,23 +1,21 @@
 #! /usr/bin/env node
-var config=require('../config')
+var config=require('../config.json')
 process.env.AWS_PROFILE=config.profile
 process.env.AWS_DEFAULT_REGION=config.profile
 var aws=require('aws-sdk')
 var Promise=require('bluebird')
 aws.config.setPromisesDependency(Promise)
-aws.config.region=require('../config').region
-var region=require('../config').region
+aws.config.region=require('../config.json').region
+var region=require('../config.json').region
 var _=require('lodash')
 var fs=require('fs')
 var cf=new aws.CloudFormation()
-var chalk=require('chalk')
 var build=require('./build')
 var check=require('./check')
 var argv=require('commander')
 var name=require('./name')
 var wait=require('./wait')
 var s3=new aws.S3()
-var ran
 
 if (require.main === module) {
     var args=argv.version('1.0')
@@ -35,7 +33,7 @@ if (require.main === module) {
         .option('--no-interactive',"omit interactive elements of output (spinners etc.)")
         .on('--help',()=>{
             log(
-`  
+`
   Operations:
 
     up:         launch a stack
@@ -51,13 +49,13 @@ if (require.main === module) {
         })
         .parse(process.argv)
 
-    var options=argv
-    var stack=!options.input ? options.args[0] : options.input.split('/')
+    const options = argv.opts();
+    var stack=!options.input ? argv.args[0] : argv.input.split('/')
         .reverse()
         .filter(x=>x)
         .slice(0,2)
         .reverse().join('-').split('.')[0]
-    var op=options.operation || (options.input ? options.args[0] : options.args[1])
+    var op=options.operation || (options.input ? argv.args[0] : argv.args[1])
     try {
         if( stack && op){
             switch(op){
@@ -115,7 +113,7 @@ async function up(stack,options){
             if(Buffer.byteLength(template)<51200){
                 var create=await cf.createStack({
                     StackName,
-                    Capabilities:["CAPABILITY_NAMED_IAM"],
+                    Capabilities:["CAPABILITY_NAMED_IAM","CAPABILITY_AUTO_EXPAND"],
                     DisableRollback:true,
                     TemplateBody:template
                 }).promise()
@@ -123,7 +121,7 @@ async function up(stack,options){
                 var exp=await bootstrap()
                 var bucket=exp.Bucket
                 var prefix=exp.Prefix
-                var url=`http://${bucket}.s3.${region}.amazonaws.com/${prefix}/templates/${stack}.json`
+                var url=`https://${bucket}.s3.${region}.amazonaws.com/${prefix}/templates/${stack}.json`
                 await s3.putObject({
                     Bucket:bucket,
                     Key:`${prefix}/templates/${stack}.json`,
@@ -131,7 +129,7 @@ async function up(stack,options){
                 }).promise()
                 var create=await cf.createStack({
                     StackName,
-                    Capabilities:["CAPABILITY_NAMED_IAM"],
+                    Capabilities:["CAPABILITY_NAMED_IAM","CAPABILITY_AUTO_EXPAND"],
                     DisableRollback:true,
                     TemplateURL:url
                 }).promise()
@@ -164,14 +162,14 @@ function update(stack,options){
             if(Buffer.byteLength(template)<51200){
                 var start=cf.updateStack({
                     StackName,
-                    Capabilities:["CAPABILITY_NAMED_IAM"],
+                    Capabilities:["CAPABILITY_NAMED_IAM","CAPABILITY_AUTO_EXPAND"],
                     TemplateBody:template
                 }).promise()
             }else{
                 var start=bootstrap().then(function(exp){
                     var bucket=exp.Bucket
                     var prefix=exp.Prefix
-                    var url=`http://${bucket}.s3.${region}.amazonaws.com/${prefix}/templates/${stack}.json`
+                    var url=`https://${bucket}.s3.${region}.amazonaws.com/${prefix}/templates/${stack}.json`
                     console.log(url)
                     return s3.putObject({
                         Bucket:bucket,
@@ -180,13 +178,13 @@ function update(stack,options){
                     }).promise()
                     .then(()=>cf.updateStack({
                         StackName,
-                        Capabilities:["CAPABILITY_NAMED_IAM"],
+                        Capabilities:["CAPABILITY_NAMED_IAM","CAPABILITY_AUTO_EXPAND"],
                         TemplateURL:url
                     }).promise())
                 })
             }
 
-            return start.then(x=>{  
+            return start.then(x=>{
                 log(`stackname: ${StackName}`,options)
                 log(`stackId: ${x.StackId}`,options)
                 if(options.wait){
@@ -204,7 +202,7 @@ async function down(stack,options){
     var StackName=options.stackName ? options.stackName : name(stack)
     log("terminating stack",options)
     if(options.dryRun){
-        return 
+        return
     }
     try{
         var down=await cf.describeStacks({
@@ -232,7 +230,7 @@ async function down(stack,options){
 async function sure(stack,options={}){
     var StackName=options.stackName ? options.stackName : name(stack)
     log(`making sure stack ${stack} is up`,options)
-    try{ 
+    try{
         await cf.describeStacks({StackName}).promise()
         await wait(stack,{show:options.interactive && !options.silent})
         log(`${stack} is up as ${StackName}`,options)
