@@ -1,15 +1,5 @@
-/*
-Copyright 2017-2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
-Licensed under the Amazon Software License (the "License"). You may not use this file
-except in compliance with the License. A copy of the License is located at
-
-http://aws.amazon.com/asl/
-
-or in the "license" file accompanying this file. This file is distributed on an "AS IS"
-BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the
-License for the specific language governing permissions and limitations under the License.
-*/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 var query=require('query-string').stringify
 var _=require('lodash')
 var Promise=require('bluebird')
@@ -35,6 +25,7 @@ module.exports=Object.assign(
     require('./import'),
     require('./settings'),
     require('./connect'),
+    require('./genesys'),
     require('./testall'),{
     _request:Promise.method(async function(context,opts){
         var url=Url.parse(opts.url)
@@ -43,6 +34,7 @@ module.exports=Object.assign(
             method:opts.method.toUpperCase(),
             url:url.href,
             path:url.path,
+            service:'execute-api', 
             headers:opts.headers || {}
         }
         if(opts.body){
@@ -51,15 +43,15 @@ module.exports=Object.assign(
             request.headers['content-type']='application/json'
         }
         try{
-            var credentials=await mutex.runExclusive(async function(){
+            const credentials=await mutex.runExclusive(async function(){
                 return context.dispatch('user/getCredentials',{},{root:true})
             })
-            var signed=sign(request,credentials)        
+            const signed=sign(request,credentials)
             delete request.headers["Host"]
             delete request.headers["Content-Length"]        
         
             context.commit('loading',true)
-            var result=await axios(signed)
+            const result=await axios(signed)
             return result.data
         }catch(e){
             console.log(JSON.stringify(_.get(e,"response",e),null,2))
@@ -128,7 +120,8 @@ module.exports=Object.assign(
         })
     },
     list(context,opts){
-        var perpage=opts.perpage || 100
+        console.log(`Calling list with opts: ${JSON.stringify(opts)}`);
+        const perpage=opts.perpage || 100
         return context.dispatch('_request',{
             url:context.rootState.info._links.questions.href+'?'+query({
                 from:(opts.page || 0)*perpage,
@@ -205,6 +198,9 @@ module.exports=Object.assign(
             url:context.rootState.info._links.questions.href+'?'+query({
                 query:opts.query,
                 topic:opts.topic || "",
+                client_filter:opts.client_filter || "",
+                score_answer: (opts.score_on === 'qna item answer') ? 'true' : 'false',
+                score_text_passage: (opts.score_on === 'text item passage') ? 'true' : 'false',
                 from:opts.from || 0
             }),
             method:'get',

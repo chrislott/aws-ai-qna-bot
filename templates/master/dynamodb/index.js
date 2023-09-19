@@ -1,12 +1,16 @@
+const util = require('../../util');
 module.exports={
     "UsersTable": {
         "Type" : "AWS::DynamoDB::Table",
         "Properties" : {
             "BillingMode" : "PAY_PER_REQUEST",
+            "PointInTimeRecoverySpecification": {
+                "PointInTimeRecoveryEnabled" : true
+            },
             "AttributeDefinitions" : [
                 {
                 "AttributeName" : "UserId",
-                "AttributeType" : "S"   
+                "AttributeType" : "S"
                 },
             ],
             "KeySchema" : [
@@ -15,6 +19,7 @@ module.exports={
                 "KeyType" : "HASH"
                 }
             ]
-        }
+        },
+        "Metadata": util.cfnNag(["W74"])
     }
 }

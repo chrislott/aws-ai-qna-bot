@@ -22,28 +22,21 @@
               v-btn(@click='emit' class="ma-2 refresh" ) 
                 span Refresh
             v-flex
-              add 
-    v-dialog(v-if="error")
-      v-card
-        v-card-title.headling Error
-        v-card-text.error--text {{Error}}
-        v-card-actions
-          v-spacer
-          v-btn.lighten-3(@click="error=''" :class="{ teal: success}" ) close
+              add
+    v-dialog(v-model="error")
+        v-card(id="error-modal")
+          v-card-title(primary-title) Error Loading Content
+          v-card-text
+            v-subheader.error--text(v-if='error' id="add-error") {{errorMsg}}
+          v-card-actions
+            v-spacer
+            v-btn.lighten-3(@click="error=false;errorMsg='';" :class="{ teal: success}" ) close
 </template>
 
 <script>
     /*
-    Copyright 2017-2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
-    Licensed under the Amazon Software License (the "License"). You may not use this file
-    except in compliance with the License. A copy of the License is located at
-
-    http://aws.amazon.com/asl/
-
-    or in the "license" file accompanying this file. This file is distributed on an "AS IS"
-    BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the
-    License for the specific language governing permissions and limitations under the License.
+    Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+    SPDX-License-Identifier: Apache-2.0
     */
 
     var Vuex = require('vuex')
@@ -56,7 +49,8 @@
                 dialog: false,
                 building: false,
                 success: false,
-                error: ''
+                error: false,
+                errorMsg: ''
             }
         },
         components: {
@@ -89,7 +83,7 @@
                         self.success = true
                         setTimeout(() => self.success = false, 2000)
                     })
-                    .catch(e => self.error = e)
+                    .catch(e => {self.error=true; self.errorMsg = e})
                     .then(() => self.building = false)
             }
         }

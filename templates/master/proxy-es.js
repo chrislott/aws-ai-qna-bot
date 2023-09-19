@@ -1,11 +1,12 @@
 var _ = require('lodash');
+const util = require('../util');
 
 var examples = _.fromPairs(require('../examples/outputs')
   .names
   .map(x => {
     return [x, { "Fn::GetAtt": ["ExamplesStack", `Outputs.${x}`] }];
   }));
-  
+
 module.exports={
     "ESProxyCodeVersion":{
         "Type": "Custom::S3Version",
@@ -25,10 +26,14 @@ module.exports={
             "S3Key": {"Fn::Sub":"${BootstrapPrefix}/lambda/proxy-es.zip"},
             "S3ObjectVersion":{"Ref":"ESProxyCodeVersion"}
         },
+        "Layers":[{"Ref":"AwsSdkLayerLambdaLayer"},
+                  {"Ref":"CommonModulesLambdaLayer"},
+                  {"Ref":"EsProxyLambdaLayer"},
+                  {"Ref":"QnABotCommonLambdaLayer"}],
         "Environment": {
           "Variables": {
             ES_INDEX:{"Fn::GetAtt":["Var","QnaIndex"]},
-            ES_ADDRESS:{"Fn::GetAtt":["ESVar","ESAddress"]},
+            ES_ADDRESS:{"Fn::Join" : [ "", [ "https://", {"Fn::GetAtt":["ESVar","ESAddress"]} ] ] },
             UTTERANCE_BUCKET:{"Ref":"AssetBucket"},
             UTTERANCE_KEY:"default-utterances.json",
           }
@@ -36,7 +41,7 @@ module.exports={
         "Handler": "index.utterances",
         "MemorySize": "1408",
         "Role": {"Fn::GetAtt": ["ESProxyLambdaRole","Arn"]},
-        "Runtime": "nodejs10.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
             "Fn::If": [ "VPCEnabled", {
@@ -52,7 +57,8 @@ module.exports={
             Key:"Type",
             Value:"Service"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     },
     "ESQidLambda": {
       "Type": "AWS::Lambda::Function",
@@ -62,16 +68,24 @@ module.exports={
             "S3Key": {"Fn::Sub":"${BootstrapPrefix}/lambda/proxy-es.zip"},
             "S3ObjectVersion":{"Ref":"ESProxyCodeVersion"}
         },
+        "Layers":[{"Ref":"AwsSdkLayerLambdaLayer"},
+                  {"Ref":"CommonModulesLambdaLayer"},
+                  {"Ref":"EsProxyLambdaLayer"},
+                  {"Ref":"QnABotCommonLambdaLayer"}],
         "Environment": {
           "Variables": {
             ES_INDEX:{"Fn::GetAtt":["Var","QnaIndex"]},
             ES_ADDRESS:{"Fn::GetAtt":["ESVar","ESAddress"]}
           }
         },
+        "Layers":[{"Ref":"AwsSdkLayerLambdaLayer"},
+                  {"Ref":"CommonModulesLambdaLayer"},
+                  {"Ref":"EsProxyLambdaLayer"},
+                  {"Ref":"QnABotCommonLambdaLayer"}],
         "Handler": "index.qid",
         "MemorySize": "1408",
         "Role": {"Fn::GetAtt": ["ESProxyLambdaRole","Arn"]},
-        "Runtime": "nodejs10.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
             "Fn::If": [ "VPCEnabled", {
@@ -87,7 +101,8 @@ module.exports={
             Key:"Type",
             Value:"Service"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     },
     "ESCleaningLambda": {
       "Type": "AWS::Lambda::Function",
@@ -97,18 +112,22 @@ module.exports={
             "S3Key": {"Fn::Sub":"${BootstrapPrefix}/lambda/proxy-es.zip"},
             "S3ObjectVersion":{"Ref":"ESProxyCodeVersion"}
         },
+        "Layers":[{"Ref":"AwsSdkLayerLambdaLayer"},
+                  {"Ref":"CommonModulesLambdaLayer"},
+                  {"Ref":"EsProxyLambdaLayer"},
+                  {"Ref":"QnABotCommonLambdaLayer"}],
         "Environment": {
           "Variables": {
             ES_INDEX:{"Fn::GetAtt":["Var","QnaIndex"]},
             ES_ADDRESS:{"Fn::GetAtt":["ESVar","ESAddress"]},
-            FEEDBACK_DELETE_RANGE_MINUTES:43200,
-            METRICS_DELETE_RANGE_MINUTES:43200,
+            FEEDBACK_DELETE_RANGE_MINUTES: {"Ref":"KibanaDashboardRetentionMinutes"},
+            METRICS_DELETE_RANGE_MINUTES: {"Ref":"KibanaDashboardRetentionMinutes"},
           }
         },
         "Handler": "index.cleanmetrics",
         "MemorySize": "1408",
         "Role": {"Fn::GetAtt": ["ESProxyLambdaRole","Arn"]},
-        "Runtime": "nodejs10.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
             "Fn::If": [ "VPCEnabled", {
@@ -124,7 +143,8 @@ module.exports={
             Key:"Type",
             Value:"Service"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     },
     "ScheduledESCleaning": {
       "Type": "AWS::Events::Rule",
@@ -155,6 +175,11 @@ module.exports={
             "S3Key": {"Fn::Sub":"${BootstrapPrefix}/lambda/proxy-es.zip"},
             "S3ObjectVersion":{"Ref":"ESProxyCodeVersion"}
         },
+        "Layers":[{"Ref":"AwsSdkLayerLambdaLayer"},
+                  {"Ref":"CommonModulesLambdaLayer"},
+                  {"Ref":"EsProxyLambdaLayer"},
+                  {"Ref":"QnABotCommonLambdaLayer"}
+                ],
         "Environment": {
           "Variables": {
             "FIREHOSE_NAME":{"Ref":"GeneralFirehose"},
@@ -163,7 +188,7 @@ module.exports={
         "Handler": "index.logging",
         "MemorySize": "1408",
         "Role": {"Fn::GetAtt": ["ESLoggingLambdaRole","Arn"]},
-        "Runtime": "nodejs10.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
             "Fn::If": [ "VPCEnabled", {
@@ -179,7 +204,8 @@ module.exports={
             Key:"Type",
             Value:"Logging"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     },
     "ESQueryLambda": {
       "Type": "AWS::Lambda::Function",
@@ -195,10 +221,14 @@ module.exports={
               CUSTOM_SETTINGS_PARAM:{"Ref":"CustomQnABotSettings"},
           }, examples)
         },
+        "Layers":[{"Ref":"AwsSdkLayerLambdaLayer"},
+                  {"Ref":"CommonModulesLambdaLayer"},
+                  {"Ref":"EsProxyLambdaLayer"},
+                  {"Ref":"QnABotCommonLambdaLayer"}],
         "Handler": "index.query",
         "MemorySize": "1408",
         "Role": {"Fn::GetAtt": ["ESProxyLambdaRole","Arn"]},
-        "Runtime": "nodejs10.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
             "Fn::If": [ "VPCEnabled", {
@@ -214,7 +244,8 @@ module.exports={
             Key:"Type",
             Value:"Query"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     },
     "ESProxyLambda": {
       "Type": "AWS::Lambda::Function",
@@ -224,6 +255,11 @@ module.exports={
             "S3Key": {"Fn::Sub":"${BootstrapPrefix}/lambda/proxy-es.zip"},
             "S3ObjectVersion":{"Ref":"ESProxyCodeVersion"}
         },
+        "Layers":[{"Ref":"AwsSdkLayerLambdaLayer"},
+                  {"Ref":"CommonModulesLambdaLayer"},
+                  {"Ref":"EsProxyLambdaLayer"},
+                  {"Ref":"QnABotCommonLambdaLayer"},
+                ],
         "Environment": {
           "Variables": {
             ES_TYPE:{"Fn::GetAtt":["Var","QnAType"]},
@@ -231,12 +267,21 @@ module.exports={
             ES_ADDRESS:{"Fn::GetAtt":["ESVar","ESAddress"]},
             DEFAULT_SETTINGS_PARAM:{"Ref":"DefaultQnABotSettings"},
             CUSTOM_SETTINGS_PARAM:{"Ref":"CustomQnABotSettings"},
+            EMBEDDINGS_API: { "Ref": "EmbeddingsApi" },
+            EMBEDDINGS_SAGEMAKER_ENDPOINT : {
+              "Fn::If": [
+                  "EmbeddingsSagemaker",
+                  {"Fn::GetAtt": ["SagemakerEmbeddingsStack", "Outputs.EmbeddingsSagemakerEndpoint"] },
+                  ""
+              ]
+            },
+            EMBEDDINGS_LAMBDA_ARN: { "Ref": "EmbeddingsLambdaArn" },
           }
         },
         "Handler": "index.handler",
         "MemorySize": "1408",
         "Role": {"Fn::GetAtt": ["ESProxyLambdaRole","Arn"]},
-        "Runtime": "nodejs10.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
             "Fn::If": [ "VPCEnabled", {
@@ -252,7 +297,8 @@ module.exports={
             Key:"Type",
             Value:"Service"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     },
     "ESProxyLambdaRole": {
       "Type": "AWS::IAM::Role",
@@ -271,14 +317,14 @@ module.exports={
         },
         "Path": "/",
         "ManagedPolicyArns": [
-          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-          "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
-          "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess",
-          "arn:aws:iam::aws:policy/TranslateReadOnly",
           {"Ref":"QueryPolicy"},
-          "arn:aws:iam::aws:policy/AmazonLexFullAccess"
         ],
         "Policies": [
+          util.basicLambdaExecutionPolicy(),
+          util.lambdaVPCAccessExecutionRole(),
+          util.xrayDaemonWriteAccess(),
+          util.translateReadOnly(),
+          util.lexFullAccess(),
           {
           	"PolicyName": "ParamStorePolicy",
           	"PolicyDocument": {
@@ -290,7 +336,47 @@ module.exports={
           		}]
           	}
           },
-          { 
+          {
+            "Fn::If": [
+              "EmbeddingsEnable",
+              {
+                "PolicyName" : "EmbeddingsPolicy",
+                "PolicyDocument" : {
+                "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Fn::If": [
+                        "EmbeddingsSagemaker",
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "sagemaker:InvokeEndpoint"
+                            ],
+                            "Resource": {"Fn::GetAtt": ["SagemakerEmbeddingsStack", "Outputs.EmbeddingsSagemakerEndpointArn"]}
+                        },
+                        {"Ref":"AWS::NoValue"}
+                      ]
+                    },
+                    {
+                      "Fn::If": [
+                        "EmbeddingsLambdaArn",
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "lambda:InvokeFunction"
+                          ],
+                          "Resource":[{"Ref":"EmbeddingsLambdaArn"}]
+                        },
+                        {"Ref":"AWS::NoValue"}
+                      ]
+                    },
+                  ]
+                }
+              },
+              {"Ref":"AWS::NoValue"}
+            ]
+          },
+          {
             "PolicyName" : "S3QNABucketReadAccess",
             "PolicyDocument" : {
             "Version": "2012-10-17",
@@ -299,7 +385,7 @@ module.exports={
                     "Effect": "Allow",
                     "Action": [
                         "s3:GetObject"
-                     ],   
+                     ],
                     "Resource": [
                         "arn:aws:s3:::QNA*/*",
                         "arn:aws:s3:::qna*/*"
@@ -309,7 +395,8 @@ module.exports={
             }
           }
         ]
-      }
+      },
+      "Metadata": util.cfnNag(["W11", "W12", "W76", "F3"])
     },
     "QueryLambdaInvokePolicy": {
       "Type": "AWS::IAM::ManagedPolicy",
@@ -347,7 +434,11 @@ module.exports={
           ]
         },
         "Path": "/",
-        "Policies":[{ 
+        "Policies":[
+          util.basicLambdaExecutionPolicy(),
+          util.lambdaVPCAccessExecutionRole(),
+          util.xrayDaemonWriteAccess(),
+          {
           "PolicyName" : "LambdaGeneralFirehoseQNALambda",
           "PolicyDocument" : {
           "Version": "2012-10-17",
@@ -365,6 +456,15 @@ module.exports={
                 {
                   "Effect": "Allow",
                   "Action": [
+                    "comprehend:DetectPiiEntities"
+                  ],
+                  "Resource": [
+                    "*"
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
                     "firehose:PutRecord",
                     "firehose:PutRecordBatch"
                   ],
@@ -375,12 +475,8 @@ module.exports={
             ]
           }
         }],
-        "ManagedPolicyArns": [
-          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-          "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
-          "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess",
-        ]
-      }
+      },
+      "Metadata": util.cfnNag(["W11", "W12"])
     },
     "QueryPolicy": {
       "Type": "AWS::IAM::ManagedPolicy",
@@ -397,7 +493,8 @@ module.exports={
             },{
               "Effect": "Allow",
               "Action": [
-                "kendra:Query"
+                "kendra:Query",
+                "kendra:Retrieve"
               ],
               "Resource":[
                 {"Fn::Sub":"arn:aws:kendra:${AWS::Region}:${AWS::AccountId}:index/*"},
@@ -416,7 +513,8 @@ module.exports={
             }
           ]
         }
-      }
+      },
+      "Metadata": util.cfnNag(["F5", "W13"])
     }
 }
 

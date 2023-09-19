@@ -9,7 +9,7 @@ module.exports={
     "Resources":_.assign.apply({},files),
     "Conditions": {},
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "QnABot nested export resources",
+    "Description": `(SO0189n-export) QnABot nested export resources - Version v${process.env.npm_package_version}`,
     "Outputs": require('./outputs'),
     "Parameters": {
         "CFNLambda":{"Type":"String"},
@@ -20,9 +20,17 @@ module.exports={
         "EsEndpoint": {"Type":"String"},
         "EsProxyLambda": {"Type":"String"},
         "ExportBucket": {"Type":"String"},
+        "LexVersion": {"Type":"String"},
+        // Lex V1
         "FallbackIntent": {"Type":"String"},
         "Intent":{"Type":"String"},
         "BotName":{"Type":"String"},
+        // Lex V2
+        "LexV2BotName": {"Type":"String"},
+        "LexV2BotId": {"Type":"String"},
+        "LexV2BotAlias": {"Type":"String"},
+        "LexV2BotAliasId": {"Type":"String"},
+        "LexV2BotLocaleIds": {"Type":"String"},
         "Api":{"Type":"String"},
         "ApiRootResourceId":{"Type":"String"},
         "Encryption":{"Type":"String"},
@@ -34,7 +42,9 @@ module.exports={
         "VPCSubnetIdList" : {"Type": "String"},
         "VPCSecurityGroupIdList": {"Type": "String"},
         "XraySetting": {"Type": "String"},
-        "KendraCrawlerSnsTopic":{"Type":"String"}
+        "KendraCrawlerSnsTopic":{"Type":"String"},
+        "AwsSdkLayerLambdaLayer": {"Type": "String"},
+        "QnABotCommonLambdaLayer":{"Type":"String"}
     },
     "Conditions": {
         "VPCEnabled": { "Fn::Not": [

@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 module.exports={
     type:"object",
     description:"Quiz documents",
@@ -132,13 +135,14 @@ module.exports={
                             }
                         },
                         required:["text","value"]
-                    },   
+                    },
                     propertyOrder: 3
                 }
             },
             propertyOrder:7,
             required:["title"]
         }
-    }
+    },
+    required:["qid"]
 
 }

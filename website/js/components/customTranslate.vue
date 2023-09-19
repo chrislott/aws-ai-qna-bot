@@ -5,12 +5,12 @@
         v-card
           v-card-title.display-1.pa-2 Import Translate Custom Terminologies
           v-card-text
-            h3 For more information about Amazon Translate custom terminologies, see <a href="https://github.com/aws-samples/aws-ai-qna-bot/blob/master/docs/customer_terminology_guide/README.md" target="_blank">here</a>
+            h3 For more information about Amazon Translate custom terminologies, see <a href="https://github.com/aws-solutions/qnabot-on-aws/blob/main/docs/custom_terminology_guide/README.md" target="_blank">here</a>
           v-card-text(v-if="!IsCustomTerminologyEnabled")
             p Set ENABLE_CUSTOM_TERMINOLOGY to true in settings to enable the use of terminology files for Amazon Translate
 
-          v-card-text(v-if="IsCustomTerminologyEnabled") 
-            p {{importWarning}}  
+          v-card-text(v-if="IsCustomTerminologyEnabled")
+            p {{importWarning}}
             p.title From File
             <span>Description:</span>
             <br/>
@@ -18,9 +18,9 @@
             <br/>
             div.ml-4.mb-2
               input(
-                type="file" 
+                type="file"
                 name="file"
-                id="upload-file" 
+                id="upload-file"
                 v-on:change="Getfile"
                 ref="file"
               )
@@ -51,18 +51,8 @@
 </template>
 
 <script>
-/*
-Copyright 2017-2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
-Licensed under the Amazon Software License (the "License"). You may not use this file
-except in compliance with the License. A copy of the License is located at
-
-http://aws.amazon.com/asl/
-
-or in the "license" file accompanying this file. This file is distributed on an "AS IS"
-BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the
-License for the specific language governing permissions and limitations under the License.
-*/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 var Vuex=require('vuex')
 var Promise=require('bluebird')
@@ -111,7 +101,7 @@ module.exports={
         console.log(JSON.stringify(settings));
         return _.get(settings[2],"ENABLE_CUSTOM_TERMINOLOGY")=="true"
     },
-    
+
     close:function(){
       this.loading=false
       this.error=false
@@ -125,7 +115,7 @@ module.exports={
         .then(result=>{
           self.jobs = result
         })
-        
+
       }
     },
     Getfile:function(event){
@@ -140,7 +130,7 @@ module.exports={
         var name=file.name
         return new Promise(function(res,rej){
           var reader = new FileReader();
-          reader.onload = function(e){ 
+          reader.onload = function(e){
             try {
               res({
                 name:file.name,

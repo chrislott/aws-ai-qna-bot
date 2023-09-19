@@ -1,6 +1,8 @@
 var fs=require('fs')
 const path = require('path')
 const resplib = path.join(__dirname, '..', '..','lib', 'response.js')
+const util = require('../../util');
+
 module.exports={
     "ESInfo":{
         "Type": "Custom::ESProxy",
@@ -20,7 +22,7 @@ module.exports={
         "Handler": "index.handler",
         "MemorySize": "128",
         "Role": {"Fn::GetAtt": ["ESProxyLambdaRole","Arn"]},
-        "Runtime": "nodejs10.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
             "Fn::If": [ "VPCEnabled", {
@@ -32,11 +34,15 @@ module.exports={
             "Fn::If": [ "XRAYEnabled", {"Mode": "Active"},
                 {"Ref" : "AWS::NoValue"} ]
         },
+        "Layers":[
+          {"Ref":"AwsSdkLayerLambdaLayer"}
+        ],
         "Tags":[{
             Key:"Type",
             Value:"CustomResource"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     }
 }
 

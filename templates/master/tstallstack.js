@@ -2,12 +2,12 @@ module.exports={
     "TestAllStack":{
         "Type" : "AWS::CloudFormation::Stack",
         "Properties" : {
-            "TemplateURL" :{"Fn::Sub":"http://${BootstrapBucket}.s3.${AWS::Region}.amazonaws.com/${BootstrapPrefix}/templates/testall.json"},
+            "TemplateURL" :{"Fn::Sub":"https://${BootstrapBucket}.s3.${AWS::Region}.amazonaws.com/${BootstrapPrefix}/templates/testall.json"},
             "Parameters" :{
                 "CFNLambda":{"Fn::GetAtt":["CFNLambda","Arn"]},
                 "CFNInvokePolicy":{"Ref":"CFNInvokePolicy"},
-                "BotName":{"Ref":"LexBot"},
-                "BotAlias":{"Ref":"VersionAlias"},
+                "LexV2BotId":{"Fn::GetAtt":["LexV2Bot","botId"]},
+                "LexV2BotAliasId":{"Fn::GetAtt":["LexV2Bot","botAliasId"]},
                 "BootstrapBucket":{"Ref":"BootstrapBucket"},
                 "BootstrapPrefix":{"Ref":"BootstrapPrefix"},
                 "VarIndex": {"Fn::GetAtt": ["Var", "QnaIndex"]},
@@ -17,6 +17,7 @@ module.exports={
                 "VPCSubnetIdList" : { "Fn::Join" : [ ",", {"Ref":"VPCSubnetIdList"} ] },
                 "VPCSecurityGroupIdList": { "Fn::Join" : [ ",", {"Ref":"VPCSecurityGroupIdList"} ] },
                 "XraySetting":{"Ref": "XraySetting"},
+                "AwsSdkLayerLambdaLayer":{"Ref":"AwsSdkLayerLambdaLayer"},
             }
         }
     }

@@ -1,5 +1,7 @@
 const _=require('lodash');
 const translate = require('./multilanguage.js');
+const qnabot = require("qnabot/logging")
+
 
 async function get_welcome_message(req, locale){
     const welcome_message = _.get(req,'_settings.DEFAULT_ALEXA_LAUNCH_MESSAGE', 'Hello, Please ask a question');
@@ -38,56 +40,56 @@ exports.parse=async function(req){
     };
     // set userPreferredLocale from Alexa request
     const alexa_locale = _.get(event,'request.locale').split("-")[0];
-    out.session.userPreferredLocale = alexa_locale;
-    console.log("Set userPreferredLocale:", out.session.userPreferredLocale);
+    _.set(out, 'session.qnabotcontext.userPreferredLocale', alexa_locale);
+    qnabot.log("Set userPreferredLocale:", out.session.qnabotcontext.userPreferredLocale);
     var welcome_message;
     var stop_message;
     var err_message;
-    
+
     switch(_.get(event,"request.type")){
         case "LaunchRequest":
-            console.log("INFO: LaunchRequest.");
+            qnabot.log("INFO: LaunchRequest.");
             welcome_message = await get_welcome_message(req,alexa_locale);
             throw new AlexaMessage(welcome_message, false) ;
         case "SessionEndedRequest":
-            console.log("INFO: SessionEndedRequest.");
+            qnabot.log("INFO: SessionEndedRequest.");
             throw new End() ;
         case "IntentRequest":
-            console.log("INFO: IntentRequest.");
+            qnabot.log("INFO: IntentRequest.");
             switch(_.get(event,"request.intent.name")){
                 case "AMAZON.CancelIntent":
-                    console.log("INFO: CancelIntent.");
+                    qnabot.log("INFO: CancelIntent.");
                     stop_message = await get_stop_message(req,alexa_locale);
                     throw new AlexaMessage(stop_message, true) ;
                 case "AMAZON.StopIntent":
-                    console.log("INFO: StopIntent.");
+                    qnabot.log("INFO: StopIntent.");
                     stop_message = await get_stop_message(req,alexa_locale);
                     throw new AlexaMessage(stop_message, true) ;
                 case "AMAZON.FallbackIntent":
-                    console.log("ERROR: FallbackIntent. This shouldn't happen - we can't get the utterance. Ask user to try again.");
-                    err_message = await translate.translateText("Sorry, I do not understand. Please try again.",'en',alexa_locale); 
-                    throw new AlexaMessage(err_message, false) ;  
+                    qnabot.log("ERROR: FallbackIntent. This shouldn't happen - we can't get the utterance. Ask user to try again.");
+                    err_message = await translate.translateText("Sorry, I do not understand. Please try again.",'en',alexa_locale);
+                    throw new AlexaMessage(err_message, false) ;
                 case "AMAZON.RepeatIntent":
                     welcome_message = await get_welcome_message(req,alexa_locale);
-                    console.log("At Repeat Intent") ;
-                    console.log(JSON.stringify(out)) ;
+                    qnabot.log("At Repeat Intent") ;
+                    qnabot.log(JSON.stringify(out)) ;
                     throw new Respond({
                         version:'1.0',
                         response: _.get(out,"session.cachedOutput",{outputSpeech:{type:"PlainText",text:welcome_message},shouldEndSession:false})
                     }) ;
                 case "Qna_intent":
-                    console.log("INFO: Qna_intent.");
+                    qnabot.log("INFO: Qna_intent.");
                     out.question=_.get(event,'request.intent.slots.QnA_slot.value',"");
                     break ;
                 default:
-                    console.log("ERROR: Unhandled Intent - ", _.get(event,"request.intent.name"));
-                    err_message = await translate.translateText("The skill is unable to process the request.",'en',alexa_locale); 
-                    throw new AlexaMessage(err_message, true) ;                    
+                    qnabot.log("ERROR: Unhandled Intent - ", _.get(event,"request.intent.name"));
+                    err_message = await translate.translateText("The skill is unable to process the request.",'en',alexa_locale);
+                    throw new AlexaMessage(err_message, true) ;
             }
     }
     if (out.question === "") {
-        console.log("ERROR: No value found for QnA_slot") ;
-        err_message = await translate.translateText("The skill is unable to process the request.",'en',alexa_locale); 
+        qnabot.log("ERROR: No value found for QnA_slot") ;
+        err_message = await translate.translateText("The skill is unable to process the request.",'en',alexa_locale);
         throw new AlexaMessage(err_message, true) ;
     }
     return out ;
@@ -95,10 +97,18 @@ exports.parse=async function(req){
 
 /**
  * @see https://developer.amazon.com/en-US/docs/alexa/custom-skills/request-and-response-json-reference.html#response-format
- * 
+ *
  */
 exports.assemble=function(request,response){
-    return {
+    let plainMessage = response.plainMessage || "";
+    if (plainMessage.includes("<speak>")) {
+        plainMessage = plainMessage.replace(/<\/?[^>]+(>|$)/g, "");
+    }
+    if (plainMessage.toLowerCase().startsWith("ok. ")) {
+        plainMessage = plainMessage.replace(/[Oo][Kk]. /g, "");
+    }
+    let subTitle = response.card && response.card.subTitle ? response.card.subTitle : undefined;
+    let res = {
         version:'1.0',
         response:{
             outputSpeech:_.pickBy({
@@ -109,28 +119,35 @@ exports.assemble=function(request,response){
             card:_.get(response,"card.imageUrl") ? {
                 type:"Standard",
                 title:response.card.title || request.question,
-                text:_.has(response.card,'subTitle')? response.card.subTitle +"\n\n" + response.plainMessage:response.plainMessage,
+                text:subTitle !== undefined ? subTitle +"\n\n" + plainMessage : plainMessage,
                 image:{
                     smallImageUrl:response.card.imageUrl,
                     largeImageUrl:response.card.imageUrl
                 }
             } : {
                 type:"Simple",
-                title:_.get(response,"card.title") || request.question || "Image",
-                content:_.has(response.card,'subTitle')? response.card.subTitle +"\n\n" + response.plainMessage:response.plainMessage
-            },
-            reprompt: {
-                outputSpeech: _.pickBy({
-                    type:response.reprompt.type,
-                    text:response.reprompt.type==='PlainText' ? response.reprompt.text : null,
-                    ssml:response.reprompt.type==='SSML' ? response.reprompt.text : null,
-                    playBehavior: 'REPLACE_ENQUEUED',
-                })
+                title: _.get(response,"card.title") || request.question || "Image",
+                content: subTitle !== undefined ? subTitle +"\n\n" + plainMessage : plainMessage
             },
             shouldEndSession:false
         },
         sessionAttributes:_.get(response,'session',{})
-    } ;
+    };
+
+    let repromptText = _.get(response, "reprompt.text", undefined);
+
+    if(repromptText) {
+        _.set(res, "response.reprompt", {
+            outputSpeech: _.pickBy({
+                    type:_.get(response, "reprompt.type", null),
+                    text:_.get(response, "reprompt.type", null)==='PlainText' ? _.get(response, "reprompt.text", null) : null,
+                    ssml:_.get(response, "reprompt.type", null)==='SSML' ? _.get(response, "reprompt.text", null) : null,
+                    playBehavior: 'REPLACE_ENQUEUED',
+                })
+        });
+    }
+
+    return res;
 } ;
 
 function End(){
@@ -155,7 +172,7 @@ function AlexaMessage(message,endSession){
             shouldEndSession:endSession
         }
     } ;
-} 
+}
 
 function Respond(message){
     this.action="RESPOND" ;

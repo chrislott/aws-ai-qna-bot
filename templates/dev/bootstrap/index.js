@@ -1,44 +1,63 @@
-var fs=require('fs')
-const path = require('path')
-const resplib = path.join(__dirname, '..', '..','lib', 'response.js')
-module.exports={
+const fs = require('fs');
+const path = require('path');
+const resplib = path.join(__dirname, '..', '..', 'lib', 'response.js');
+const util = require('../../util');
+
+module.exports = {
   "Resources": {
     "Bucket": {
       "Type": "AWS::S3::Bucket",
       "Properties": {
-        "VersioningConfiguration":{
-            "Status":"Enabled"
+        "VersioningConfiguration": {
+          "Status": "Enabled"
         },
-        "LifecycleConfiguration":{
-            "Rules":[{
-                "Status":"Enabled",
-                "NoncurrentVersionExpirationInDays":1
-            }]
+        "LifecycleConfiguration": {
+          "Rules": [{
+            "Status": "Enabled",
+            "NoncurrentVersionExpirationInDays": 1
+          }]
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
         }
       }
     },
-    "Clear":{
-        "Type": "Custom::S3Clear",
-        "DependsOn":["CFNLambdaPolicy"],
-        "Properties": {
-            "ServiceToken": { "Fn::GetAtt" : ["CFNLambda", "Arn"] },
-            "Bucket":{"Ref":"Bucket"}
-        }
+    "HTTPSOnlyBucketPolicy": util.httpsOnlyBucketPolicy(),
+    "Clear": {
+      "Type": "Custom::S3Clear",
+      "DependsOn": ["CFNLambdaPolicy"],
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt": ["CFNLambda", "Arn"] },
+        "Bucket": { "Ref": "Bucket" }
+      }
     },
-    "CFNLambda":{
+    "CFNLambda": {
       "Type": "AWS::Lambda::Function",
       "Properties": {
         "Code": {
-            "ZipFile":fs.readFileSync(__dirname+'/handler.js','utf-8') + fs.readFileSync(resplib,'utf-8')
+          "ZipFile": fs.readFileSync(__dirname + '/handler.js', 'utf-8') + fs.readFileSync(resplib, 'utf-8')
         },
         "Handler": "index.handler",
         "MemorySize": "128",
-        "Role": {"Fn::GetAtt": ["CFNLambdaRole","Arn"]},
-        "Runtime": "nodejs10.x",
+        "Role": { "Fn::GetAtt": ["CFNLambdaRole", "Arn"] },
+        "Runtime": "nodejs16.x",
         "Timeout": 60
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     },
-    "CFNLambdaRole":{
+    "CFNLambdaRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
         "AssumeRolePolicyDocument": {
@@ -53,53 +72,60 @@ module.exports={
             }
           ]
         },
+        "Policies": [util.basicLambdaExecutionPolicy()],
         "Path": "/",
         "ManagedPolicyArns": [
-            "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-            {"Ref":"CFNLambdaPolicy"}
+          { "Ref": "CFNLambdaPolicy" }
         ]
-      }
+      },
+      "Metadata": util.cfnNag(["W11", "F3"])
     },
-    "CFNLambdaPolicy":{
+    "CFNLambdaPolicy": {
       "Type": "AWS::IAM::ManagedPolicy",
       "Properties": {
         "PolicyDocument": {
           "Version": "2012-10-17",
           "Statement": [
             {
+              "Sid": "CFNLambdaS3Access",
               "Effect": "Allow",
               "Action": [
-                "s3:*"
+                "s3:ListBucketVersions",
+                "s3:PutBucketNotification",
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion"
               ],
-              "Resource":[
-                {"Fn::Sub":"arn:aws:s3:::${Bucket}*"},
+              "Resource": [
+                { "Fn::Sub": "arn:aws:s3:::${Bucket}*" },
               ]
             }
           ]
         }
       }
     },
-    "ReadPolicy":{
-        "Type" : "AWS::S3::BucketPolicy",
-        "Condition":"Public",
-        "Properties" : {
-            "Bucket" : {"Ref":"Bucket"},
-            "PolicyDocument" : {
-                "Version":"2012-10-17",
-                "Statement":[{
-                    "Sid":"PublicReadForGetBucketObjects",
-                    "Effect":"Allow",
-                    "Principal":{"AWS":"*"},
-                    "Action":["s3:Get*","s3:List*"],
-                    "Resource":[
-                        {"Fn::Sub":"arn:aws:s3:::${Bucket}*"}
-                    ]
-                }]
-            }
+    "ReadPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Condition": "Public",
+      "Properties": {
+        "Bucket": { "Ref": "Bucket" },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Sid": "PublicReadForGetBucketObjects",
+            "Effect": "Allow",
+            "Principal": { "AWS": "*" },
+            "Action": ["s3:Get*", "s3:List*"],
+            "Resource": [
+              { "Fn::Sub": "arn:aws:s3:::${Bucket}*" }
+            ]
+          }]
         }
+      }
     }
   },
-  "Conditions": {},
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "Bootstrap bucket for QnABot assets",
   "Mappings": {},
@@ -114,14 +140,12 @@ module.exports={
     }
   },
   "Parameters": {
-    "Public":{
-        "Type":"String",
-        "Default":"PRIVATE"
+    "Public": {
+      "Type": "String",
+      "Default": "PRIVATE"
     }
   },
-  "Conditions":{
-    "Public":{"Fn::Equals":[{"Ref":"Public"},"PUBLIC"]}
+  "Conditions": {
+    "Public": { "Fn::Equals": [{ "Ref": "Public" }, "PUBLIC"] }
   }
-}
-
-
+};

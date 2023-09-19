@@ -3,6 +3,7 @@ var resource=require('../util/resource')
 var lambda=require('../util/lambda')
 var mock=require('../util/mock')
 var _=require('lodash')
+const util = require('../../../util');
 
 module.exports={
     "Examples": resource('examples'),
@@ -78,7 +79,7 @@ module.exports={
         "Handler": "index.documents",
         "MemorySize": "128",
         "Role": {"Fn::GetAtt": ["S3ListLambdaRole","Arn"]},
-        "Runtime": "nodejs10.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
             "Fn::If": [ "VPCEnabled", {
@@ -90,11 +91,15 @@ module.exports={
             "Fn::If": [ "XRAYEnabled", {"Mode": "Active"},
                 {"Ref" : "AWS::NoValue"} ]
         },
+        "Layers":[
+          {"Ref":"AwsSdkLayerLambdaLayer"}
+        ],
         "Tags":[{
             Key:"Type",
             Value:"Api"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     },
     "ExampleS3ListPhotoLambda": {
       "Type": "AWS::Lambda::Function",
@@ -105,7 +110,7 @@ module.exports={
         "Handler": "index.photos",
         "MemorySize": "128",
         "Role": {"Fn::GetAtt": ["S3ListLambdaRole","Arn"]},
-        "Runtime": "nodejs10.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
             "Fn::If": [ "VPCEnabled", {
@@ -117,11 +122,15 @@ module.exports={
             "Fn::If": [ "XRAYEnabled", {"Mode": "Active"},
                 {"Ref" : "AWS::NoValue"} ]
         },
+        "Layers":[
+          {"Ref":"AwsSdkLayerLambdaLayer"}
+        ],
         "Tags":[{
             Key:"Type",
             Value:"Api"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     }
 }
 

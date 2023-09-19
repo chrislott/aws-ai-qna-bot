@@ -1,16 +1,19 @@
-var fs=require('fs')
-var _=require('lodash')
-var fs=require('fs')
+var fs=require('fs');
+var _=require('lodash');
+const util = require('../../util');
+
 
 var js=fs.readdirSync(`${__dirname}/js_lambda_hooks`)
-.map(name=>{
+.map(name=> {
+  if (fs.existsSync(`${__dirname}/js_lambda_hooks/${name}/${name}.js`)) {
     return {
-        name:`EXT${name}`,
-        resource:jslambda(name),
-        codeVersionName:`CodeVersion${name}`,
-        codeVersionResource:codeVersion(name),
-        id:`${name}JS`,
+      name: `EXT${name}`,
+      resource: jslambda(name),
+      codeVersionName: `CodeVersion${name}`,
+      codeVersionResource: codeVersion(name),
+      id: `${name}JS`,
     }
+  }
 })
 
 var py=fs.readdirSync(`${__dirname}/py_lambda_hooks`)
@@ -55,7 +58,7 @@ module.exports=Object.assign(
         "Handler": "ui_import.handler",
         "MemorySize": "128",
         "Role":{"Ref":"CFNLambdaRole"} ,
-        "Runtime": "nodejs10.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
             "Fn::If": [ "VPCEnabled", {
@@ -67,11 +70,15 @@ module.exports=Object.assign(
             "Fn::If": [ "XRAYEnabled", {"Mode": "Active"},
                 {"Ref" : "AWS::NoValue"} ]
         },
+        "Layers":[
+          {"Ref":"AwsSdkLayerLambdaLayer"}
+        ],
         "Tags":[{
             Key:"Type",
             Value:"CustomResource"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92", "W58"])
     },
     "EXTUiImportVersion": {
       "Type": "Custom::S3Version",
@@ -81,6 +88,40 @@ module.exports=Object.assign(
           "Key": {"Fn::Sub":"${BootstrapPrefix}/lambda/EXTUiImports.zip"},
           "BuildDate":(new Date()).toISOString()
       }
+    },
+    JsLambdaHookSDKLambdaLayerCodeVersion: {
+      Type: "Custom::S3Version",
+      Properties: {
+        ServiceToken: {"Ref": "CFNLambda"},
+        Bucket: { Ref: "BootstrapBucket" },
+        Key: { "Fn::Sub": "${BootstrapPrefix}/lambda/js_lambda_hook_sdk.zip" },
+        BuildDate: new Date().toISOString(),
+      },
+    },
+    JsLambdaHookSDKLambdaLayer: {
+      Type: "AWS::Lambda::LayerVersion",
+      Properties: {
+        Content: {
+          S3Bucket: { Ref: "BootstrapBucket" },
+          S3Key: { "Fn::Sub": "${BootstrapPrefix}/lambda/js_lambda_hook_sdk.zip"  },
+          S3ObjectVersion: { Ref: "JsLambdaHookSDKLambdaLayerCodeVersion" },
+        },
+        LayerName:{
+          "Fn::Join": [
+            "-",
+            [
+              "JsLambdaHookSDK",
+              {
+                "Fn::Select": [
+                  2,
+                  {"Fn::Split": ["-", {Ref: "DefaultQnABotSettings"}]},
+                ],
+              },
+            ],
+          ],
+        },
+        CompatibleRuntimes: [process.env.npm_package_config_lambdaRuntime],
+      },
     },
     "ExtensionsInvokePolicy": {
       "Type": "AWS::IAM::ManagedPolicy",
@@ -115,7 +156,11 @@ module.exports=Object.assign(
           ]
         },
         "Path": "/",
-        "Policies":[{ 
+        "Policies":[
+          util.basicLambdaExecutionPolicy(),
+          util.lambdaVPCAccessExecutionRole(),
+          util.xrayDaemonWriteAccess(),
+          {
           "PolicyName" : "LambdaFeedbackFirehoseQNALambda",
           "PolicyDocument" : {
           "Version": "2012-10-17",
@@ -123,10 +168,10 @@ module.exports=Object.assign(
                 {
                   "Effect": "Allow",
                   "Action": [
-        						"kms:Encrypt",
-        						"kms:Decrypt",
-        					], 
-        					"Resource":{"Fn::GetAtt":["QuizKey","Arn"]}
+                    "kms:Encrypt",
+                    "kms:Decrypt",
+                  ],
+                  "Resource":{"Fn::GetAtt":["QuizKey","Arn"]}
                 },
                 {
                   "Effect": "Allow",
@@ -136,7 +181,7 @@ module.exports=Object.assign(
                   "Resource": [
                     {"Fn::Join": ["",["arn:aws:lambda:",{ "Ref" : "AWS::Region" },":",{ "Ref" : "AWS::AccountId" },":function:qna-*"]]},
                     {"Fn::Join": ["",["arn:aws:lambda:",{ "Ref" : "AWS::Region" },":",{ "Ref" : "AWS::AccountId" },":function:QNA-*"]]},
-                    {"Ref":"QIDLambdaArn"} 
+                    {"Ref":"QIDLambdaArn"}
                   ]
                 },
                 {
@@ -161,40 +206,37 @@ module.exports=Object.assign(
                   "Effect": "Allow",
                   "Action": [
                       "lex:PostText"
-                   ],   
+                   ],
                   "Resource": [
                       {"Fn::Join": ["",["arn:aws:lex:",{ "Ref" : "AWS::Region" },":",{ "Ref" : "AWS::AccountId" },":bot:*",":qna*"]]},
                       {"Fn::Join": ["",["arn:aws:lex:",{ "Ref" : "AWS::Region" },":",{ "Ref" : "AWS::AccountId" },":bot:*",":QNA*"]]},
                   ]
               }
             ]
-          }          
+          }
         },
-        { 
-          "PolicyName" : "S3QNABucketReadAccess",
+        {
+          "PolicyName" : "QNASecretsManagerLambda",
           "PolicyDocument" : {
           "Version": "2012-10-17",
             "Statement": [
               {
                   "Effect": "Allow",
                   "Action": [
-                      "s3:GetObject"
-                   ],   
+                    "secretsmanager:GetResourcePolicy",
+                    "secretsmanager:GetSecretValue",
+                    "secretsmanager:DescribeSecret"
+                   ],
                   "Resource": [
-                      "arn:aws:s3:::QNA*/*",
-                      "arn:aws:s3:::qna*/*"
+                    {"Fn::Join": ["",["arn:aws:secretsmanager:",{ "Ref" : "AWS::Region" },":",{ "Ref" : "AWS::AccountId" },":secret:qna-*"]]},
+                    {"Fn::Join": ["",["arn:aws:secretsmanager:",{ "Ref" : "AWS::Region" },":",{ "Ref" : "AWS::AccountId" },":secret:QNA-*"]]}
                   ]
               }
             ]
           }
         }],
-        "ManagedPolicyArns": [
-            "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-            "arn:aws:iam::aws:policy/TranslateReadOnly",
-            "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
-            "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess",
-            "arn:aws:iam::aws:policy/AmazonKendraReadOnlyAccess"]
-      }
+      },
+      "Metadata": util.cfnNag(["W11", "W12"])
     }
 });
 function jslambda(name){
@@ -211,8 +253,6 @@ function jslambda(name){
       },
       "Environment": {
         "Variables": {
-          "ES_QNA_TYPE": {"Ref":"QnAType"},
-          "ES_QUIZE_TYPE": {"Ref":"QuizType"},
           "ES_INDEX": {"Ref":"Index"},
           "FIREHOSE_NAME":{"Ref":"FeedbackFirehoseName"},
           "ES_ADDRESS": {"Ref":"ESAddress"},
@@ -222,7 +262,7 @@ function jslambda(name){
       "Handler":`${name}.handler`,
       "MemorySize": "2048",
       "Role": {"Fn::GetAtt": ["ExtensionLambdaRole","Arn"]},
-      "Runtime": "nodejs10.x",
+      "Runtime": process.env.npm_package_config_lambdaRuntime,
       "Timeout": 300,
       "VpcConfig" : {
           "Fn::If": [ "VPCEnabled", {
@@ -230,15 +270,20 @@ function jslambda(name){
               "SecurityGroupIds": { "Fn::Split" : [ ",", {"Ref": "VPCSecurityGroupIdList"} ] },
           }, {"Ref" : "AWS::NoValue"} ]
       },
+      "Layers":[
+        {"Ref":"AwsSdkLayerLambdaLayer"},
+        {"Ref":"JsLambdaHookSDKLambdaLayer"}
+      ],
       "TracingConfig" : {
           "Fn::If": [ "XRAYEnabled", {"Mode": "Active"},
               {"Ref" : "AWS::NoValue"} ]
       },
-            "Tags":[{
+      "Tags":[{
           Key:"Type",
           Value:"LambdaHook"
       }]
-    }
+    },
+    "Metadata": util.cfnNag(["W92"])
   }
 }
 function pylambda(name){
@@ -255,8 +300,6 @@ function pylambda(name){
       },
       "Environment": {
         "Variables": {
-          "ES_QNA_TYPE": {"Ref":"QnAType"},
-          "ES_QUIZE_TYPE": {"Ref":"QuizType"},
           "ES_INDEX": {"Ref":"Index"},
           "FIREHOSE_NAME":{"Ref":"FeedbackFirehoseName"},
           "ES_ADDRESS": {"Ref":"ESAddress"},
@@ -267,23 +310,24 @@ function pylambda(name){
       "Handler":`${name}.handler`,
       "MemorySize": "2048",
       "Role": {"Fn::GetAtt": ["ExtensionLambdaRole","Arn"]},
-      "Runtime": "python3.6",
+      "Runtime": process.env.npm_package_config_pythonRuntime,
       "Timeout": 300,
       "VpcConfig" : {
         "Fn::If": [ "VPCEnabled", {
             "SubnetIds": { "Fn::Split" : [ ",", {"Ref": "VPCSubnetIdList"} ] },
             "SecurityGroupIds": { "Fn::Split" : [ ",", {"Ref": "VPCSecurityGroupIdList"} ] },
         }, {"Ref" : "AWS::NoValue"} ]
-    },
-    "TracingConfig" : {
-        "Fn::If": [ "XRAYEnabled", {"Mode": "Active"},
-            {"Ref" : "AWS::NoValue"} ]
-    },
+      },
+      "TracingConfig" : {
+          "Fn::If": [ "XRAYEnabled", {"Mode": "Active"},
+              {"Ref" : "AWS::NoValue"} ]
+      },
       "Tags":[{
           Key:"Type",
           Value:"LambdaHook"
       }]
-    }
+    },
+    "Metadata": util.cfnNag(["W92"])
   }
 }
 
@@ -298,3 +342,4 @@ function codeVersion(name){
     }
   }
 }
+

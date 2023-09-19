@@ -1,4 +1,5 @@
 var _=require('lodash')
+const util = require('../../util');
 
 module.exports={
     "ESCFNProxyLambda": {
@@ -15,10 +16,15 @@ module.exports={
                 CUSTOM_SETTINGS_PARAM:{"Ref":"CustomQnABotSettings"},
             }
         },
-        "Handler": "index.resource",
+        "Layers":[{"Ref":"AwsSdkLayerLambdaLayer"},
+                  {"Ref":"CommonModulesLambdaLayer"},
+                  {"Ref":"CfnLambdaLayer"},
+                  {"Ref":"EsProxyLambdaLayer"},
+                  {"Ref":"QnABotCommonLambdaLayer"}],
+        "Handler": "resource.handler",
         "MemorySize": "1408",
         "Role": {"Fn::GetAtt": ["ESProxyLambdaRole","Arn"]},
-        "Runtime": "nodejs10.x",
+        "Runtime": process.env.npm_package_config_lambdaRuntime,
         "Timeout": 300,
         "VpcConfig" : {
           "Fn::If": [ "VPCEnabled", {
@@ -34,7 +40,8 @@ module.exports={
             Key:"Type",
             Value:"CustomResource"
         }]
-      }
+      },
+      "Metadata": util.cfnNag(["W92"])
     },
     "MetricsIndex":{
         "Type": "Custom::ESProxy",
@@ -43,8 +50,8 @@ module.exports={
             "create":{
                 index:{"Fn::Sub":"${Var.MetricsIndex}"},
                 endpoint:{"Fn::GetAtt":["ESVar","ESAddress"]},
-                body:{"Fn::Sub":JSON.stringify({ 
-                    settings:{},
+                body:{"Fn::Sub":JSON.stringify({
+                    settings:{"index.mapping.total_fields.limit":2000},
                 })}
             }
         }
@@ -56,7 +63,7 @@ module.exports={
             "create":{
                 index:{"Fn::Sub":"${Var.FeedbackIndex}"},
                 endpoint:{"Fn::GetAtt":["ESVar","ESAddress"]},
-                body:{"Fn::Sub":JSON.stringify({ 
+                body:{"Fn::Sub":JSON.stringify({
                     settings:{},
                 })}
             }
@@ -69,10 +76,34 @@ module.exports={
             "create":{
                 index:{"Fn::Sub":"${Var.QnaIndex}"},
                 endpoint:{"Fn::GetAtt":["ESVar","ESAddress"]},
-                body:{"Fn::Sub":JSON.stringify({ 
-                    settings:require('./index_settings.js'),
-                    mappings:require('./index_mappings.js'),
-                })}
+                body:{"Fn::Sub": [
+                    JSON.stringify({
+                        settings:require('./index_settings.js'),
+                        mappings:require('./index_mappings.js'),
+                    }),
+                    {
+                        "EmbeddingsDimensions" : {
+                            "Fn::If": [
+                                "EmbeddingsEnable",
+                                {
+                                    "Fn::If": [
+                                        "EmbeddingsSagemaker",
+                                        "1024",
+                                        {
+
+                                            "Fn::If": [
+                                                "EmbeddingsLambda",
+                                                {"Ref": "EmbeddingsLambdaDimensions"},
+                                                "INVALID EMBEDDINGS API - Cannot determine dimensions"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                "1" // minimal default to use if embeddings are disabled
+                            ]
+                        }
+                    }
+                ]}
             }
         }
     },
@@ -83,9 +114,9 @@ module.exports={
             "ServiceToken": { "Fn::GetAtt" : ["ESCFNProxyLambda", "Arn"] },
             "create":{
                 endpoint:{"Fn::GetAtt":["ESVar","ESAddress"]},
-                path:"/_plugin/kibana/api/kibana/dashboards/import",
+                path:"/_dashboards/api/opensearch-dashboards/dashboards/import?force=true",
                 method:"POST",
-                headers:{"kbn-xsrf":"kibana"},
+                headers:{"osd-xsrf":"true"},
                 body:require('./kibana/QnABotDashboard'),
                 replaceTokenInBody:[
                     {f:"<INDEX_QNA>",r:{"Fn::Sub":"${Var.QnaIndex}"}},

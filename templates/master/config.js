@@ -11,22 +11,17 @@ var permissions=_.keys(require('./lambda'))
         'InvokePermissionLexStatusLambda'
         ].includes(x))
 
+const util = require('../util');
+
 module.exports={
 "API": {
   "Type": "AWS::ApiGateway::RestApi",
   "Properties": {
     "Name": {"Ref": "AWS::StackName"},
     "Description":"An Api interface for the admin actions on the QNA bot",
-    "BinaryMediaTypes":["image/png"]
+    "BinaryMediaTypes":["image/png"],
+    "MinimumCompressionSize":500000
   },
-},
-"ApiCompression":{
-    "Type": "Custom::ApiCompression",
-    "Properties": {
-        "ServiceToken": { "Fn::GetAtt" : ["CFNLambda", "Arn"] },
-        "restApiId": {"Ref": "API"},
-        "value":"500000"
-    }
 },
 "Deployment":{
     "Type": "Custom::ApiDeployment",
@@ -35,7 +30,8 @@ module.exports={
         "restApiId": {"Ref": "API"},
         "buildDate":new Date(),
         "stage":"prod",
-        "Encryption":{"Ref": "Encryption"}
+        "Encryption":{"Ref": "Encryption"}, 
+        "LexV2BotLocaleIds": {"Ref": "LexV2BotLocaleIds"}
     },
     "DependsOn":methods.concat(permissions)
 },
@@ -93,6 +89,7 @@ function stage(name){
                 ]]}
             ]}
         }
-      }
+      },
+      "Metadata": util.cfnNag(["W64", "W69"])
     }
 }

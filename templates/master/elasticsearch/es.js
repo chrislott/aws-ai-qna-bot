@@ -1,17 +1,24 @@
+const util = require('../../util');
+
 var properties={
-    
-    "ElasticsearchClusterConfig": {
+    "CognitoOptions":{
+        "Enabled": true,
+        "IdentityPoolId": {"Ref":"KibanaIdPool"},
+        "RoleArn":{"Fn::GetAtt":["ESCognitoRole","Arn"]},
+        "UserPoolId": {"Ref":"UserPool"}
+    },
+    "ClusterConfig": {
        "DedicatedMasterEnabled": false,
        "InstanceCount": {"Ref":"ElasticSearchNodeCount"},
-       "InstanceType": {"Fn::If": [ "Encrypted", "c5.large.elasticsearch", "t3.small.elasticsearch"]},
-       "ZoneAwarenessEnabled": "true"
+       "InstanceType": {"Fn::If": [ "Encrypted", "m6g.large.search", "t3.small.search"]},
+       "ZoneAwarenessEnabled":  {"Fn::If": [ "SingleNode", false, true]}
     },
     "EBSOptions": {
        "EBSEnabled": true,
-       "VolumeSize": 10,
+       "VolumeSize": {"Ref":"ElasticSearchEBSVolumeSize"},
        "VolumeType": "gp2"
     },
-    "ElasticsearchVersion": "7.9",
+    "EngineVersion": "OpenSearch_1.3",
     "SnapshotOptions": {
        "AutomatedSnapshotStartHour": "0"
     },
@@ -36,39 +43,11 @@ var properties={
 }
 
 module.exports={
-    "ElasticsearchDomain": {
-        "Type": "AWS::Elasticsearch::Domain",
+    "OpensearchDomain": {
+        "Type": "AWS::OpenSearchService::Domain",
         "DependsOn":["PreUpgradeExport"],
         "Condition":"CreateDomain",
-        "Properties":properties 
-    },
-    "ElasticsearchDomainUpdate": {
-         "Type": "Custom::ElasticSearchUpdate",
-         "DependsOn":["CognitoDomain"],
-         "Properties":{
-            "ServiceToken": { "Fn::GetAtt" : ["CFNLambda", "Arn"] },
-            "DomainName":{"Fn::GetAtt":["ESVar","ESDomain"]},
-            "CognitoOptions":{
-                Enabled: true ,
-                IdentityPoolId: {"Ref":"KibanaIdPool"},
-                RoleArn:{"Fn::GetAtt":["ESCognitoRole","Arn"]},
-                UserPoolId: {"Ref":"UserPool"}
-            },
-            "AccessPolicies": {"Fn::Sub":JSON.stringify({
-               "Version": "2012-10-17",
-               "Statement": [
-                  {
-                     "Sid": "CognitoAuth",
-                     "Principal": {
-                        "AWS":"${KibanaRole.Arn}"
-                     },
-                     "Effect": "Allow",
-                     "Action": "es:ESHttp*",
-                     "Resource":"${ESVar.ESArn}/*"
-                  }
-               ]
-            })},
-        }
+        "Properties":properties
     },
     "ESCognitoRole": {
       "Type": "AWS::IAM::Role",
@@ -86,7 +65,10 @@ module.exports={
           ]
         },
         "Path": "/",
-        "ManagedPolicyArns": ["arn:aws:iam::aws:policy/AmazonESCognitoAccess"],
-      }
+        "Policies": [
+            util.esCognitoAccess()
+        ],
+      },
+      "Metadata": util.cfnNag(["W11", "W12", "F38"])
     }
 }

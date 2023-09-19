@@ -1,37 +1,46 @@
-TEMPLATES=$(shell for l in $$(ls ./templates | grep -v util | grep -v README.md);do echo templates/$$l;done)
+TEMPLATES=$(shell for l in $$(ls ./templates | egrep -v "util|lib|README.md");do echo templates/$$l;done)
 
-All: assets templates lambda website build
+All: ml_model assets templates lambda website make_directories
 
-build:
-	mkdir -p build; mkdir -p build/lambda; mkdir -p build/templates/test;mkdir -p build/templates;mkdir -p build/documents; mkdir -p build/templates/dev
+build: All
 
-.PHONY: lambda templates upload website test bootstrap assets
+make_directories:
+	mkdir -p build/ml_model build/lambda build/documents build/templates/test  build/templates/dev
+
+.PHONY: ml_model lambda templates upload website test bootstrap assets config.aws-solutions.json
+.PHONY: $(TEMPLATES)
 
 config.json:
 	node bin/config.js > config.json
 
-lambda:  build
+config.aws-solutions.json:
+	node bin/config.js buildType=AWSSolutions > config.json
+
+ml_model:  make_directories
+	make -C ./ml_model
+
+lambda:  make_directories
 	make -C ./lambda
 
-bootstrap: build
+bootstrap: make_directories
 	$(MAKE) ../../build/templates/dev/bootstrap.json -C templates/dev
 
-templates: $(TEMPLATES) build
-	for l in $(TEMPLATES); do	\
-		$(MAKE) -C $$l;			\
-	done;			
+templates: $(TEMPLATES)
 
-website: build
+$(TEMPLATES): make_directories
+	$(MAKE) -C $@
+
+website: make_directories
 	$(MAKE) -C ./website
 
-assets: build 
+assets: make_directories
 	$(MAKE) -C ./assets
 
-samples:docs/blog-samples.json build
+samples:docs/blog-samples.json make_directories
 	cp docs/blog-samples.json build/documents
 
-upload: templates lambda website build assets
+upload: ml_model templates lambda website make_directories assets
 	./bin/upload.sh
 
-test: build 
+test: make_directories
 	$(MAKE) -C test

@@ -3,7 +3,7 @@
     v-layout(column )
       v-flex
         v-card
-          v-card-title 
+          v-card-title
             h3 Alexa Instructions
           v-card-text(class="pa-0")
             v-stepper(v-model="stepNumber" class="elevation-0")
@@ -25,9 +25,9 @@
                       v-layout(row)
                         v-flex(xs1)
                           v-btn(
-                            @click="stepNumber--" v-if="index>0" 
+                            @click="stepNumber--" v-if="index>0"
                             style="height:100%"
-                            left) 
+                            left)
                             v-icon keyboard_arrow_left
                         v-flex(xs10)
                           v-container
@@ -54,30 +54,20 @@
                           v-btn(
                             @click="stepNumber++" v-if="index+1<steps.length"
                             style="height:100%"
-                            right) 
+                            right)
                             v-icon keyboard_arrow_right
 </template>
 
 <script>
-/*
-Copyright 2017-2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
-Licensed under the Amazon Software License (the "License"). You may not use this file
-except in compliance with the License. A copy of the License is located at
-
-http://aws.amazon.com/asl/
-
-or in the "license" file accompanying this file. This file is distributed on an "AS IS"
-BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the
-License for the specific language governing permissions and limitations under the License.
-*/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 var Vuex=require('vuex')
 var Promise=require('bluebird')
 var markdown=require('marked')
 var renderer=new markdown.Renderer()
 renderer.link=function(href,title,text){
-  return `<a href="${href}" title="${title}" target="_blank">${text}</a>` 
+  return `<a href="${href}" title="${title}" target="_blank">${text}</a>`
 }
 renderer.table=function(header,body){
   return `<table class="pure-table"><thead>${header}</thead><tbody>${body}</tbody></table>`
@@ -115,11 +105,11 @@ module.exports={
     {
     steps:function(){
       var self=this
-      return _.map(this.stepsRaw,function(x){ 
+      return _.map(this.stepsRaw,function(x){
         var y=Object.assign({},x)
         if(x.text){
           var temp=handlebars.compile(x.text)
-          y.text=markdown(temp(self.$store.state.bot),{renderer})
+          y.text=markdown.parse(temp(self.$store.state.bot),{renderer})
         }
         return y
       })
@@ -127,13 +117,13 @@ module.exports={
     }
   ),
   created:function(){
-    this.$store.dispatch('data/botinfo').catch(()=>null) 
+    this.$store.dispatch('data/botinfo').catch(()=>null)
   },
   methods:{
     copy:function(btn){
       btn.loading=true
       setTimeout(()=>btn.loading=false,1000)
     }
-  } 
+  }
 }
 </script>

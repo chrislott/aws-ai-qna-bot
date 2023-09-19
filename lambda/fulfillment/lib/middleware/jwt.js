@@ -1,16 +1,16 @@
 var _=require('lodash');
 var jwt = require('jsonwebtoken');
-const jwksClient = require('jwks-rsa-promisified');
-
+const jwksClient = require('jwks-rsa');
+const qnabot = require("qnabot/logging")
 
 exports.decode=function (idtoken) {
-  var decoded = jwt.decode(idtoken, {complete:true});
+  let decoded = jwt.decode(idtoken, {complete:true});
   if (!decoded) { return null; }
-  var payload = decoded.payload;
+  let payload = decoded.payload;
   //try parse the payload
   if(typeof payload === 'string') {
     try {
-      var obj = JSON.parse(payload);
+      let obj = JSON.parse(payload);
       if(obj !== null && typeof obj === 'object') {
         payload = obj;
       }
@@ -28,10 +28,10 @@ async function getSigningKey(kid,url) {
       jwksUri: url,
     });
     // locate IdP for the token from list of trusted IdPs
-    var signingKey = "" ;
+    let signingKey = "" ;
     try {
-      var key = await client.getSigningKeyAsync(kid);
-      signingKey = key.publicKey || key.rsaPublicKey ;
+      let key = await client.getSigningKey(kid);
+      signingKey = key.getPublicKey();
     } catch (e) {
     }
   return signingKey;
@@ -43,20 +43,19 @@ function verifyToken(idtoken,signingKey) {
     jwt.verify(idtoken, signingKey) ;
     return true;
   } catch (e) {
-    console.log("idaccesstoken is not valid:", e);
+    qnabot.log("idaccesstoken is not valid:", e);
     return false;
   }
 }
 
 exports.verify=async function (idtoken,kid,urls) {
-  for (var index = 0; index < urls.length; index++) { 
-    var url=urls[index]; 
+  for(let url of urls) {
     // locate IdP for the token from list of trusted IdPs
-    console.log("checking:",url);
+    qnabot.log("checking:",url);
     let signingKey = await getSigningKey(kid,url);
     if (signingKey) {
-      console.log("token kid matches:",url);
-      console.log("verifying token");
+      qnabot.log("token kid matches:",url);
+      qnabot.log("verifying token");
       if (verifyToken(idtoken,signingKey)) {
         return url;
       }

@@ -6,23 +6,29 @@ const qnabotversion = process.env.npm_package_version + " - v1";
 module.exports={
     "QNAInvokePermission": {
       "Type": "AWS::Lambda::Permission",
+      "DependsOn": "FulfillmentLambdaAliaslive",
       "Properties": {
         "Action": "lambda:InvokeFunction",
-        "FunctionName": {"Fn::GetAtt":["FulfillmentLambda","Arn"]},
+        "FunctionName": {  "Fn::Join": [ ":", [
+          {"Fn::GetAtt":["FulfillmentLambda","Arn"]},
+          "live"
+        ]]},
         "Principal": "lex.amazonaws.com"
       }
     },
     "SlotType":{
-        "Type": "Custom::LexSlotType",
-        "Properties": {
-            "ServiceToken": { "Fn::GetAtt" : ["CFNLambda", "Arn"] },
-            "createVersion" : true,
-            "description": "custom slot type " + qnabotversion,
-            "enumerationValues": config.utterances.map(x=>{return {value:x}})
-        }
+      "Type": "Custom::LexSlotType",
+      "Condition": "CreateLexV1Bots",
+      "Properties": {
+          "ServiceToken": { "Fn::GetAtt" : ["CFNLambda", "Arn"] },
+          "createVersion" : true,
+          "description": "custom slot type " + qnabotversion,
+          "enumerationValues": config.utterances.map(x=>{return {value:x}})
+      }
     },
     "Intent": {
       "Type": "Custom::LexIntent",
+      "Condition": "CreateLexV1Bots",
       "Properties": {
         "ServiceToken": {
           "Fn::GetAtt": ["CFNLambda","Arn"]
@@ -44,7 +50,10 @@ module.exports={
         "fulfillmentActivity": {
           "type": "CodeHook",
           "codeHook": {
-            "uri": {"Fn::GetAtt":["FulfillmentLambda","Arn"]},
+            "uri": {  "Fn::Join": [ ":", [
+              {"Fn::GetAtt":["FulfillmentLambda","Arn"]},
+              "live"
+            ]]},
             "messageVersion": "1.0"
           }
         }
@@ -52,27 +61,32 @@ module.exports={
       "DependsOn": "QNAInvokePermission"
     },
     "IntentFallback": {
-        "Type": "Custom::LexIntent",
-        "Properties": {
-            "ServiceToken": {
-                "Fn::GetAtt": ["CFNLambda","Arn"]
-            },
-            "prefix":"qnabotfallbackfulfilment",
-            "description": "custom fallback intent " + qnabotversion,
-            "createVersion" : true,
-            "fulfillmentActivity": {
-                "type": "CodeHook",
-                "codeHook": {
-                    "uri": {"Fn::GetAtt":["FulfillmentLambda","Arn"]},
-                    "messageVersion": "1.0"
-                }
-            },
-            "parentIntentSignature": "AMAZON.FallbackIntent"
-        },
-        "DependsOn": "QNAInvokePermission"
+      "Type": "Custom::LexIntent",
+      "Condition": "CreateLexV1Bots",
+      "Properties": {
+          "ServiceToken": {
+              "Fn::GetAtt": ["CFNLambda","Arn"]
+          },
+          "prefix":"qnabotfallbackfulfilment",
+          "description": "custom fallback intent " + qnabotversion,
+          "createVersion" : true,
+          "fulfillmentActivity": {
+              "type": "CodeHook",
+              "codeHook": {
+                  "uri": {  "Fn::Join": [ ":", [
+                    {"Fn::GetAtt":["FulfillmentLambda","Arn"]},
+                    "live"
+                  ]]},
+                  "messageVersion": "1.0"
+              }
+          },
+          "parentIntentSignature": "AMAZON.FallbackIntent"
+      },
+      "DependsOn": "QNAInvokePermission"
     },
     "LexBot": {
       "Type": "Custom::LexBot",
+      "Condition": "CreateLexV1Bots",
       "Properties": {
         "ServiceToken": {
           "Fn::GetAtt": [
@@ -102,6 +116,7 @@ module.exports={
     },
     "VersionAlias": {
       "Type": "Custom::LexAlias",
+      "Condition": "CreateLexV1Bots",
       "DependsOn": "LexBot",
       "Properties": {
         "ServiceToken": {
@@ -115,6 +130,21 @@ module.exports={
         },
         "name": "live",
         "description": "QnABot live alias " + qnabotversion
+      }
+    },
+    "LexV2Bot": {
+      "Type": "Custom::LexV2Bot",
+      "Properties": {
+        "ServiceToken": {
+          "Fn::GetAtt": [
+            "Lexv2BotLambda",
+            "Arn"
+          ]
+        },
+        "description": "QnABot LexV2 Bot" + qnabotversion,
+        "BuildDate":(new Date()).toISOString(),
+        "localIds": {"Ref": "LexV2BotLocaleIds"},
+        "utterances": config.utterances
       }
     }
 }
